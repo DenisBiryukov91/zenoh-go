@@ -14,33 +14,28 @@ import (
 	"os/signal"
 	"runtime"
 	"unsafe"
+	"zenoh-go/examples/utils"
 )
 
 const (
-	defaultKeyexpr    = "demo/example/zenoh-go-pub"
-	defaultValue      = "Pub from Go!"
-	defaultAttachment = ""
+	defaultKeyexpr = "demo/example/zenoh-go-pub"
+	defaultValue   = "Pub from Go!"
 )
 
 type Args struct {
 	keyexpr string
 	value   string
+	common  utils.CommonArgs
 }
 
 func parseArgs() Args {
-	var (
-		keyexpr string
-		value   string
-	)
+	args := Args{common: utils.ParseCommonArgs()}
 
-	flag.StringVar(&keyexpr, "k", defaultKeyexpr, "The key expression to publish to")
-	flag.StringVar(&value, "p", defaultValue, "The value to publish")
+	flag.StringVar(&args.keyexpr, "k", defaultKeyexpr, "The key expression to publish to")
+	flag.StringVar(&args.value, "p", defaultValue, "The value to publish")
 	flag.Parse()
 
-	return Args{
-		keyexpr: keyexpr,
-		value:   value,
-	}
+	return args
 }
 
 func main() {
@@ -54,7 +49,7 @@ func main() {
 	C.zc_init_log_from_env_or(logLevel)
 
 	var config C.z_owned_config_t
-	C.z_config_default(&config)
+	utils.ConfigFromArgs((*utils.ZConfig)(unsafe.Pointer(&config)), &args.common)
 
 	fmt.Println("Opening session...")
 	var session C.z_owned_session_t

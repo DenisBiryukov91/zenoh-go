@@ -3,7 +3,6 @@ package main
 /*
 #cgo LDFLAGS: -lzenohcd
 #include "zenoh.h"
-#include <stdlib.h>
 
 void dataHandler(struct z_loaned_sample_t *sample, void *context);
 */
@@ -15,22 +14,22 @@ import (
 	"os"
 	"os/signal"
 	"unsafe"
+	"zenoh-go/examples/utils"
 )
 
 const defaultKeyexpr = "demo/example/**"
 
 type Args struct {
 	keyexpr string
+	common  utils.CommonArgs
 }
 
 func parseArgs() Args {
-	var keyexpr string
-	flag.StringVar(&keyexpr, "k", defaultKeyexpr, "The key expression to subscribe to")
-	flag.Parse()
+	args := Args{common: utils.ParseCommonArgs()}
 
-	return Args{
-		keyexpr: keyexpr,
-	}
+	flag.StringVar(&args.keyexpr, "k", defaultKeyexpr, "The key expression to publish to")
+
+	return args
 }
 
 func kindToStr(kind uint32) string {
@@ -45,7 +44,7 @@ func kindToStr(kind uint32) string {
 }
 
 //export dataHandler
-func dataHandler(sample *C.z_loaned_sample_t, context unsafe.Pointer) {
+func dataHandler(sample *C.z_loaned_sample_t, _ unsafe.Pointer) {
 	var keyString C.z_view_string_t
 	C.z_keyexpr_as_view_string(C.z_sample_keyexpr(sample), &keyString)
 
@@ -67,7 +66,7 @@ func main() {
 	C.zc_init_log_from_env_or(logLevel)
 
 	var config C.z_owned_config_t
-	C.z_config_default(&config)
+	utils.ConfigFromArgs((*utils.ZConfig)(unsafe.Pointer(&config)), &args.common)
 
 	var session C.z_owned_session_t
 	if C.z_open(&session, C.z_config_move(&config), nil) < 0 {
