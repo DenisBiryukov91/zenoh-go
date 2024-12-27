@@ -25,11 +25,14 @@ type Args struct {
 }
 
 func parseArgs() Args {
-	args := Args{common: utils.ParseCommonArgs()}
+	var keyexpr string
 
-	flag.StringVar(&args.keyexpr, "k", defaultKeyexpr, "The key expression to publish to")
+	flag.StringVar(&keyexpr, "k", defaultKeyexpr, "The key expression to publish to")
 
-	return args
+	return Args{
+		keyexpr: keyexpr,
+		common:  utils.ParseCommonArgs(),
+	}
 }
 
 func kindToStr(kind uint32) string {

@@ -29,13 +29,19 @@ type Args struct {
 }
 
 func parseArgs() Args {
-	args := Args{common: utils.ParseCommonArgs()}
+	var (
+		keyexpr string
+		value   string
+	)
 
-	flag.StringVar(&args.keyexpr, "k", defaultKeyexpr, "The key expression to publish to")
-	flag.StringVar(&args.value, "p", defaultValue, "The value to publish")
-	flag.Parse()
+	flag.StringVar(&keyexpr, "k", defaultKeyexpr, "The key expression to publish to")
+	flag.StringVar(&value, "p", defaultValue, "The value to publish")
 
-	return args
+	return Args{
+		keyexpr: keyexpr,
+		value:   value,
+		common:  utils.ParseCommonArgs(),
+	}
 }
 
 func main() {
