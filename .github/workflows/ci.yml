@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  schedule:
+    - cron: "0 6 * * 1-5"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.22'
+
+    - name: Install zenoh-c dependencies
+      run: |
+        git clone https://github.com/eclipse-zenoh/zenoh-c.git
+        cd zenoh-c
+        mkdir build && cd build
+        cmake .. -DCMAKE_INSTALL_PREFIX="$HOME/local"
+        cmake --build . --target install --config Release
+
+    - name: Install dependencies
+      run: make deps
+
+    - name: Build all examples 
+      run: |
+        export CGO_CFLAGS="-I$HOME/local/include"
+        export CGO_LDFLAGS="-L$HOME/local/lib"
+        make
+
+    - name: Check code format
+      run: make fmt
