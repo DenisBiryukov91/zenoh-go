@@ -38,10 +38,6 @@ make z_pub
 
 After building the examples, you can run them from the `bin` directory.
 
-### Run All Examples
-
-To run all the examples, you can manually execute each binary located in the `bin` directory.
-
 ### Run a Specific Example
 
 To run a specific example, navigate to the `bin` directory and execute the binary. For example, to run the `z_pub` example:
