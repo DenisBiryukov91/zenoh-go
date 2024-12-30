@@ -15,7 +15,7 @@
 package main
 
 /*
-#cgo LDFLAGS: -lzenohcd
+#cgo LDFLAGS: -lzenohc
 #include "zenoh.h"
 
 void dataHandler(struct z_loaned_sample_t *sample, void *context);

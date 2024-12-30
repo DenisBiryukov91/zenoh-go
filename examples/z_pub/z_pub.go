@@ -15,9 +15,8 @@
 package main
 
 /*
-#cgo LDFLAGS: -lzenohcd
+#cgo LDFLAGS: -lzenohc
 #include "zenoh.h"
-#include <stdlib.h>
 */
 import "C"
 

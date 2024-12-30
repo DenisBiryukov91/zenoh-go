@@ -15,7 +15,7 @@
 package main
 
 /*
-#cgo LDFLAGS: -lzenohcd
+#cgo LDFLAGS: -lzenohc
 #include "zenoh.h"
 
 void queryHandler(struct z_loaned_query_t *query, void *context);

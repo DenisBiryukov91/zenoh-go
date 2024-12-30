@@ -15,7 +15,7 @@
 package utils
 
 /*
-#cgo LDFLAGS: -lzenohcd
+#cgo LDFLAGS: -lzenohc
 #include "zenoh.h"
 */
 import "C"
