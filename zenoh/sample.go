@@ -1,0 +1,100 @@
+//
+// Copyright (c) 2025 ZettaScale Technology
+//
+// This program and the accompanying materials are made available under the
+// terms of the Eclipse Public License 2.0 which is available at
+// http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
+// which is available at https://www.apache.org/licenses/LICENSE-2.0.
+//
+// SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+//
+// Contributors:
+//   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
+//
+
+package zenoh
+
+// #include "zenoh.h"
+import "C"
+import "github.com/BooleanCat/option"
+
+// The kind of Sample, can either be [SampleKindPut] or [SampleKindDelete].
+type SampleKind int
+
+const (
+	SampleKindPut    SampleKind = C.Z_SAMPLE_KIND_PUT    // The Sample was issued by a ``Put`` operation.
+	SampleKindDelete SampleKind = C.Z_SAMPLE_KIND_DELETE // The Sample was issued by a ``Delete`` operation.
+)
+
+// A Zenoh sample.
+type Sample struct {
+	keyexpr    KeyExpr
+	payload    ZBytes
+	kind       SampleKind
+	encoding   Encoding
+	timestamp  option.Option[TimeStamp]
+	qos        qos
+	attachment option.Option[ZBytes]
+}
+
+// Return the key expression of the sample.
+func (sample *Sample) KeyExpr() KeyExpr {
+	return sample.keyexpr
+}
+
+// Return sample payload data.
+func (sample *Sample) Payload() ZBytes {
+	return sample.payload
+}
+
+// Return sample kind.
+func (sample *Sample) Kind() SampleKind {
+	return sample.kind
+}
+
+// Return the encoding associated with the sample data.
+func (sample *Sample) Encoding() Encoding {
+	return sample.encoding
+}
+
+// Return sample timestamp if there is any.
+func (sample *Sample) TimeStamp() option.Option[TimeStamp] {
+	return sample.timestamp
+}
+
+// Return sample attachment if there is any.
+func (sample *Sample) Attachement() option.Option[ZBytes] {
+	return sample.attachment
+}
+
+// Return sample qos priority value.
+func (sample *Sample) Priority() Priority {
+	return sample.qos.priority
+}
+
+// Return sample qos congestion contorl value.
+func (sample *Sample) CongestionControl() CongestionControl {
+	return sample.qos.congestionControl
+}
+
+// Return whether sample qos IsExpress flag was set or not.
+func (sample *Sample) IsExpress() bool {
+	return sample.qos.isExpress
+}
+
+func newSampleFromC(cSample *C.z_loaned_sample_t) Sample {
+	var s Sample
+	s.payload = newZBytesFromC(C.z_sample_payload(cSample))
+	s.keyexpr = newKeyExprFromC(C.z_sample_keyexpr(cSample))
+	s.encoding = newEncodingFromC(C.z_sample_encoding(cSample))
+	s.kind = SampleKind(C.z_sample_kind(cSample))
+	tsPtr := C.z_sample_timestamp(cSample)
+	if tsPtr != nil {
+		s.timestamp = option.Some(TimeStamp{timestamp: *tsPtr})
+	}
+	attachmentPtr := C.z_sample_attachment(cSample)
+	if attachmentPtr != nil {
+		s.attachment = option.Some(newZBytesFromC(attachmentPtr))
+	}
+	return s
+}

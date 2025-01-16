@@ -14,21 +14,77 @@
 
 package main
 
-/*
-#cgo LDFLAGS: -lzenohc
-#include "zenoh.h"
-*/
-import "C"
-
 import (
-	"flag"
 	"fmt"
 	"os"
-	"runtime"
-	"strings"
-	"unsafe"
 	"zenoh-go/examples/utils"
+	"zenoh-go/zenoh"
+
+	"github.com/BooleanCat/option"
+	"github.com/spf13/pflag"
 )
+
+func main() {
+	zenoh.InitLoggerFromEnvOr("error")
+	args := parseArgs()
+
+	fmt.Println("Opening session...")
+	session, err := zenoh.Open(args.config, nil)
+	if err != nil {
+		fmt.Println("Failed to open Zenoh session")
+		os.Exit(-1)
+	}
+	defer session.Drop()
+
+	selectorKey, selectorParams := utils.ParseSelector(args.selector)
+
+	keyExpr, err := zenoh.NewKeyExpr(selectorKey)
+	if err != nil {
+		fmt.Printf("%s is not a valid key expression\n", selectorKey)
+		os.Exit(-1)
+	}
+
+	// Create key expression
+	fmt.Printf("Sending Query '%s'...\n", args.selector)
+
+	// Create FIFO channel
+	replies := make(chan zenoh.Reply, 16)
+
+	// Set get options
+	opts := zenoh.GetOptions{}
+	if args.payload != "" {
+		opts.Payload = option.Some(zenoh.NewZBytesFromString(args.payload))
+	}
+	opts.TimeoutMs = args.timeout
+	opts.Target = option.Some(args.queryTarget)
+
+	// send Query
+	session.Get(
+		keyExpr,
+		selectorParams,
+		func(reply zenoh.Reply) { replies <- reply },
+		func() { close(replies) },
+		&opts)
+
+	for reply := range replies {
+		if reply.IsOk() {
+			sample := reply.Ok().Unwrap()
+			fmt.Printf(">> Received ('%s': '%s')\n",
+				sample.KeyExpr(),
+				sample.Payload())
+		} else {
+			fmt.Println("Received an error")
+		}
+	}
+}
+
+type Args struct {
+	selector    string
+	payload     string
+	timeout     uint64
+	queryTarget zenoh.QueryTarget
+	config      zenoh.Config
+}
 
 const (
 	defaultSelector = "demo/example/**"
@@ -36,127 +92,22 @@ const (
 	defaultValue    = ""
 )
 
-type Args struct {
-	selector  string
-	value     string
-	timeoutMs uint64
-	common    utils.CommonArgs
-}
-
 func parseArgs() Args {
-	var (
-		selector  string
-		value     string
-		timeoutMs uint64
-	)
+	var selector string
+	var payload string
+	var timeout uint64
+	var queryTargetString string
 
-	flag.StringVar(&selector, "s", defaultSelector, "The selector of resources to query")
-	flag.StringVar(&value, "p", defaultValue, "An optional value to put in the query")
-	flag.Uint64Var(&timeoutMs, "o", defaultTimeout, "Query timeout in milliseconds")
+	pflag.StringVarP(&selector, "selector", "s", defaultSelector, "The selection of resources to query.")
+	pflag.StringVarP(&payload, "payload", "p", defaultValue, "An optional value to put in the query.")
+	pflag.StringVarP(&queryTargetString, "target", "t", "BEST_MATCHING", "Query target (BEST_MATCHING | ALL | ALL_COMPLETE).")
+	pflag.Uint64VarP(&timeout, "timeout", "o", 10000, "Query timeout in milliseconds.")
 
-	return Args{
-		selector:  selector,
-		value:     value,
-		timeoutMs: timeoutMs,
-		common:    utils.ParseCommonArgs(),
-	}
-}
-
-func main() {
-	pinner := &runtime.Pinner{}
-	defer pinner.Unpin()
-
-	args := parseArgs()
-
-	logLevel := C.CString("error")
-	defer C.free(unsafe.Pointer(logLevel))
-	C.zc_init_log_from_env_or(logLevel)
-
-	var config C.z_owned_config_t
-	utils.ConfigFromArgs((*utils.ZConfig)(unsafe.Pointer(&config)), &args.common)
-
-	// Open session
-	var session C.z_owned_session_t
-	if C.z_open(&session, C.z_config_move(&config), nil) < 0 {
-		fmt.Println("Unable to open session!")
+	config := utils.ParseConfig()
+	queryTarget, err := utils.ParseQueryTarget(queryTargetString)
+	if err != nil {
+		fmt.Println(err.Error())
 		os.Exit(-1)
 	}
-	defer C.z_session_drop(C.z_session_move(&session))
-
-	// Create key expression
-	ke := args.selector
-	keLen := strings.Index(ke, "?")
-	var paramsC *C.char
-	pinner.Pin(&paramsC)
-	if keLen == -1 {
-		keLen = len(ke)
-		paramsC = C.CString("")
-	} else {
-		paramsC = C.CString(ke[keLen+1:])
-	}
-	defer C.free(unsafe.Pointer(paramsC))
-	keyExprC := C.CString(ke[:keLen])
-	defer C.free(unsafe.Pointer(keyExprC))
-
-	var keyExpr C.z_view_keyexpr_t
-	if C.z_view_keyexpr_from_substr(&keyExpr, keyExprC, C.size_t(keLen)) < 0 {
-		fmt.Printf("%s is not a valid key expression\n", ke[:keLen])
-		os.Exit(-1)
-	}
-
-	fmt.Printf("Sending Query '%s'...\n", args.selector)
-
-	// Create FIFO handler and closure
-	var handler C.z_owned_fifo_handler_reply_t
-	var closure C.z_owned_closure_reply_t
-	C.z_fifo_channel_reply_new(&closure, &handler, 16)
-
-	// Set get options
-	var opts C.z_get_options_t
-	C.z_get_options_default(&opts)
-	opts.timeout_ms = C.uint64_t(args.timeoutMs)
-
-	if args.value != "" {
-		payloadC := C.CString(args.value)
-		defer C.free(unsafe.Pointer(payloadC))
-
-		var payload C.z_owned_bytes_t
-		pinner.Pin(&payload)
-		C.z_bytes_from_static_str(&payload, payloadC)
-		opts.payload = C.z_bytes_move(&payload)
-	}
-
-	// Send query
-	C.z_get(C.z_session_loan(&session), C.z_view_keyexpr_loan(&keyExpr), paramsC, C.z_closure_reply_move(&closure), &opts)
-
-	// Receive replies
-	for {
-		var reply C.z_owned_reply_t
-		res := C.z_fifo_handler_reply_recv(C.z_fifo_handler_reply_loan(&handler), &reply)
-		if res != C.Z_OK {
-			break
-		}
-
-		if C.z_reply_is_ok(C.z_reply_loan(&reply)) {
-			sample := C.z_reply_ok(C.z_reply_loan(&reply))
-
-			var keyStr C.z_view_string_t
-			C.z_keyexpr_as_view_string(C.z_sample_keyexpr(sample), &keyStr)
-
-			var replyStr C.z_owned_string_t
-			C.z_bytes_to_string(C.z_sample_payload(sample), &replyStr)
-
-			fmt.Printf(">> Received ('%s': '%s')\n",
-				C.GoStringN(C.z_string_data(C.z_view_string_loan(&keyStr)), C.int(C.z_string_len(C.z_view_string_loan(&keyStr)))),
-				C.GoStringN(C.z_string_data(C.z_string_loan(&replyStr)), C.int(C.z_string_len(C.z_string_loan(&replyStr)))))
-
-			C.z_string_drop(C.z_string_move(&replyStr))
-		} else {
-			fmt.Println("Received an error")
-		}
-		C.z_reply_drop(C.z_reply_move(&reply))
-	}
-
-	C.z_fifo_handler_reply_drop(C.z_fifo_handler_reply_move(&handler))
-	C.z_session_drop(C.z_session_move(&session))
+	return Args{selector: selector, payload: payload, queryTarget: queryTarget, timeout: timeout, config: config}
 }

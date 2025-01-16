@@ -14,85 +14,47 @@
 
 package main
 
-/*
-#cgo LDFLAGS: -lzenohc
-#include "zenoh.h"
-*/
-import "C"
-
 import (
-	"flag"
 	"fmt"
 	"os"
 	"os/signal"
-	"runtime"
-	"unsafe"
+	"time"
 	"zenoh-go/examples/utils"
+	"zenoh-go/zenoh"
+
+	"github.com/BooleanCat/option"
+	"github.com/spf13/pflag"
 )
-
-const (
-	defaultKeyexpr = "demo/example/zenoh-go-pub"
-	defaultValue   = "Pub from Go!"
-)
-
-type Args struct {
-	keyexpr string
-	value   string
-	common  utils.CommonArgs
-}
-
-func parseArgs() Args {
-	var (
-		keyexpr string
-		value   string
-	)
-
-	flag.StringVar(&keyexpr, "k", defaultKeyexpr, "The key expression to publish to")
-	flag.StringVar(&value, "p", defaultValue, "The value to publish")
-
-	return Args{
-		keyexpr: keyexpr,
-		value:   value,
-		common:  utils.ParseCommonArgs(),
-	}
-}
 
 func main() {
-	pinner := &runtime.Pinner{}
-	defer pinner.Unpin()
-
+	zenoh.InitLoggerFromEnvOr("error")
 	args := parseArgs()
 
-	logLevel := C.CString("error")
-	defer C.free(unsafe.Pointer(logLevel))
-	C.zc_init_log_from_env_or(logLevel)
-
-	var config C.z_owned_config_t
-	utils.ConfigFromArgs((*utils.ZConfig)(unsafe.Pointer(&config)), &args.common)
-
 	fmt.Println("Opening session...")
-	var session C.z_owned_session_t
-	if C.z_open(&session, C.z_config_move(&config), nil) < 0 {
-		fmt.Println("Unable to open session!")
+	session, err := zenoh.Open(args.config, nil)
+	if err != nil {
+		fmt.Printf("Failed to open Zenoh session: %v\n", err)
 		os.Exit(-1)
 	}
-	defer C.z_session_drop(C.z_session_move(&session))
+	defer session.Drop()
 
-	fmt.Printf("Declaring Publisher on '%s'...\n", args.keyexpr)
-	keyExprC := C.CString(args.keyexpr)
-	defer C.free(unsafe.Pointer(keyExprC))
-	var ke C.z_view_keyexpr_t
-	C.z_view_keyexpr_from_str(&ke, keyExprC)
+	keyexpr, err := zenoh.NewKeyExpr(args.keyexpr)
+	if err != nil {
+		fmt.Printf("%s is not a valid key expression\n", args.keyexpr)
+		os.Exit(-1)
+	}
 
-	var pub C.z_owned_publisher_t
-	if C.z_declare_publisher(C.z_session_loan(&session), &pub, C.z_view_keyexpr_loan(&ke), nil) < 0 {
+	fmt.Printf("Declaring Publisher on '%s'...\n", keyexpr)
+	pub, err := session.DeclarePublisher(keyexpr, nil)
+	if err != nil {
 		fmt.Println("Unable to declare Publisher for key expression!")
 		os.Exit(-1)
 	}
-	defer C.z_publisher_drop(C.z_publisher_move(&pub))
+	defer pub.Drop()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
+	fmt.Println("Press CTRL-C to quit...")
 
 	idx := 0
 	for {
@@ -100,25 +62,43 @@ func main() {
 		case <-stop:
 			return
 		default:
-			C.z_sleep_s(1)
-			message := fmt.Sprintf("[%4d] %s", idx, args.value)
-			fmt.Printf("Putting Data ('%s': '%s')...\n", args.keyexpr, message)
+			time.Sleep(time.Second)
+			message := fmt.Sprintf("[%4d] %s", idx, args.payload)
+			fmt.Printf("Putting Data ('%s': '%s')...\n", keyexpr, message)
 
-			payload := C.z_owned_bytes_t{}
-			payloadStr := C.CString(message)
-			defer C.free(unsafe.Pointer(payloadStr))
-			C.z_bytes_copy_from_str(&payload, payloadStr)
-
-			options := C.z_publisher_put_options_t{}
-			C.z_publisher_put_options_default(&options)
-
-			var encoding C.z_owned_encoding_t
-			pinner.Pin(&encoding)
-			C.z_encoding_clone(&encoding, C.z_encoding_text_plain())
-			options.encoding = C.z_encoding_move(&encoding)
-
-			C.z_publisher_put(C.z_publisher_loan(&pub), C.z_bytes_move(&payload), &options)
+			putOpts := zenoh.PublisherPutOptions{}
+			if len(args.attachment) != 0 {
+				putOpts.Attachement = option.Some(zenoh.NewZBytesFromString(args.attachment))
+			}
+			if err := pub.Put(zenoh.NewZBytesFromString(message), &putOpts); err != nil {
+				fmt.Printf("Failed to put data: %v\n", err)
+			}
 			idx++
 		}
 	}
+}
+
+const (
+	defaultKeyexpr    = "demo/example/zenoh-go-pub"
+	defaultValue      = "Pub from Go!"
+	defaultAttachment = ""
+)
+
+type Args struct {
+	keyexpr    string
+	payload    string
+	attachment string
+	config     zenoh.Config
+}
+
+func parseArgs() Args {
+	var keyexpr string
+	var payload string
+	var attachment string
+
+	pflag.StringVarP(&keyexpr, "key", "k", defaultKeyexpr, "The key expression to publish to.")
+	pflag.StringVarP(&payload, "payload", "p", defaultValue, "The value to publish.")
+	pflag.StringVarP(&attachment, "attach", "a", defaultAttachment, "The attachment to add to each put.")
+
+	return Args{keyexpr: keyexpr, payload: payload, attachment: attachment, config: utils.ParseConfig()}
 }

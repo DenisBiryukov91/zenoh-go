@@ -24,19 +24,6 @@ import (
 	"github.com/spf13/pflag"
 )
 
-func dataHandler(sample zenoh.Sample) {
-	fmt.Printf(">> [Subscriber] Received %s ('%s': '%s')",
-		kindToStr(sample.Kind()),
-		sample.KeyExpr().String(),
-		sample.Payload().String())
-
-	// check if attachment exists
-	if sample.Attachement().IsSome() {
-		fmt.Printf(" (%s)", sample.Attachement().Unwrap().String())
-	}
-	fmt.Print("\n")
-}
-
 func main() {
 	zenoh.InitLoggerFromEnvOr("error")
 	args := parseArgs()
@@ -55,32 +42,26 @@ func main() {
 		os.Exit(-1)
 	}
 
-	fmt.Printf("Declaring Subscriber on '%s'...\n", keyexpr)
-	sub, err := session.DeclareSubscriber(keyexpr, dataHandler, nil, nil)
+	fmt.Printf("Declaring Publisher on '%s'...\n", keyexpr)
+	pub, err := session.DeclarePublisher(keyexpr, nil)
 	if err != nil {
-		fmt.Println("Unable to declare subscriber.")
+		fmt.Println("Unable to declare Publisher for key expression!")
 		os.Exit(-1)
 	}
-	defer sub.Drop()
+	defer pub.Drop()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
-	fmt.Println("Press CTRL-C to quit...")
-	<-stop
-}
 
-func kindToStr(kind zenoh.SampleKind) string {
-	switch kind {
-	case zenoh.SampleKindPut:
-		return "PUT"
-	case zenoh.SampleKindDelete:
-		return "DELETE"
-	default:
-		return "UNKNOWN"
+	fmt.Printf("Deleting resources matching '%s'...\n", keyexpr)
+	if err := session.Delete(keyexpr, nil); err != nil {
+		fmt.Printf("Delete failed: %v\n", err)
 	}
 }
 
-const defaultKeyexpr = "demo/example/**"
+const (
+	defaultKeyexpr = "demo/example/zenoh-go-pub"
+)
 
 type Args struct {
 	keyexpr string
@@ -89,6 +70,8 @@ type Args struct {
 
 func parseArgs() Args {
 	var keyexpr string
-	pflag.StringVarP(&keyexpr, "key", "k", defaultKeyexpr, "The key expression to subscribe to.")
+
+	pflag.StringVarP(&keyexpr, "key", "k", defaultKeyexpr, "The key expression to publish to.")
+
 	return Args{keyexpr: keyexpr, config: utils.ParseConfig()}
 }

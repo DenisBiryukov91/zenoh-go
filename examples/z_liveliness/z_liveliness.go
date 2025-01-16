@@ -14,81 +14,42 @@
 
 package main
 
-/*
-#cgo LDFLAGS: -lzenohc
-#include "zenoh.h"
-*/
-import "C"
-
 import (
-	"flag"
 	"fmt"
 	"os"
 	"os/signal"
-	"runtime"
-	"unsafe"
 	"zenoh-go/examples/utils"
+	"zenoh-go/zenoh"
+
+	"github.com/spf13/pflag"
 )
-
-const (
-	defaultKeyExpr = "group1/zenoh-rs"
-)
-
-type Args struct {
-	keyexpr string
-	common  utils.CommonArgs
-}
-
-func parseArgs() Args {
-	var keyexpr string
-
-	flag.StringVar(&keyexpr, "k", defaultKeyExpr, "The key expression for the liveliness token")
-
-	return Args{
-		keyexpr: keyexpr,
-		common:  utils.ParseCommonArgs(),
-	}
-}
 
 func main() {
-	pinner := &runtime.Pinner{}
-	defer pinner.Unpin()
-
+	zenoh.InitLoggerFromEnvOr("error")
 	args := parseArgs()
 
-	logLevel := C.CString("error")
-	defer C.free(unsafe.Pointer(logLevel))
-	C.zc_init_log_from_env_or(logLevel)
+	fmt.Println("Opening session...")
+	session, err := zenoh.Open(args.config, nil)
+	if err != nil {
+		fmt.Println("Failed to open Zenoh session")
+		os.Exit(-1)
+	}
+	defer session.Drop()
 
-	var config C.z_owned_config_t
-	utils.ConfigFromArgs((*utils.ZConfig)(unsafe.Pointer(&config)), &args.common)
-
-	// Create key expression
-	keyExprC := C.CString(args.keyexpr)
-	defer C.free(unsafe.Pointer(keyExprC))
-
-	var keyExpr C.z_view_keyexpr_t
-	if C.z_view_keyexpr_from_str(&keyExpr, keyExprC) < 0 {
+	keyExpr, err := zenoh.NewKeyExpr(args.keyexpr)
+	if err != nil {
 		fmt.Printf("%s is not a valid key expression\n", args.keyexpr)
 		os.Exit(-1)
 	}
 
-	// Open session
-	fmt.Printf("Opening session...\n")
-	var session C.z_owned_session_t
-	if C.z_open(&session, C.z_config_move(&config), nil) < 0 {
-		fmt.Println("Unable to open session!")
-		os.Exit(-1)
-	}
-	defer C.z_session_drop(C.z_session_move(&session))
-
 	// Declare liveliness token
 	fmt.Printf("Declaring liveliness token '%s'...\n", args.keyexpr)
-	var token C.z_owned_liveliness_token_t
-	if C.z_liveliness_declare_token(C.z_session_loan(&session), &token, C.z_view_keyexpr_loan(&keyExpr), nil) < 0 {
+	token, err := session.Liveliness().DeclareToken(keyExpr, nil)
+	if err != nil {
 		fmt.Println("Unable to create liveliness token!")
 		os.Exit(-1)
 	}
+	defer token.Drop()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -96,5 +57,19 @@ func main() {
 	<-stop
 
 	fmt.Println("Undeclaring liveliness token...")
-	C.z_liveliness_token_drop(C.z_liveliness_token_move(&token))
+}
+
+const defaultKeyexpr = "group1/**"
+
+type Args struct {
+	keyexpr string
+	config  zenoh.Config
+}
+
+func parseArgs() Args {
+	var keyexpr string
+
+	pflag.StringVarP(&keyexpr, "key", "k", defaultKeyexpr, "The key expression for the liveliness token.")
+
+	return Args{keyexpr: keyexpr, config: utils.ParseConfig()}
 }

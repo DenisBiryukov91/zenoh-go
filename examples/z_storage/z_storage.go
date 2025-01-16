@@ -24,19 +24,6 @@ import (
 	"github.com/spf13/pflag"
 )
 
-func dataHandler(sample zenoh.Sample) {
-	fmt.Printf(">> [Subscriber] Received %s ('%s': '%s')",
-		kindToStr(sample.Kind()),
-		sample.KeyExpr().String(),
-		sample.Payload().String())
-
-	// check if attachment exists
-	if sample.Attachement().IsSome() {
-		fmt.Printf(" (%s)", sample.Attachement().Unwrap().String())
-	}
-	fmt.Print("\n")
-}
-
 func main() {
 	zenoh.InitLoggerFromEnvOr("error")
 	args := parseArgs()
@@ -55,13 +42,46 @@ func main() {
 		os.Exit(-1)
 	}
 
+	storage := make(map[string]zenoh.Sample)
+
+	subHandler := func(sample zenoh.Sample) {
+		fmt.Printf(">> [Subscriber] Received %s ('%s': '%s')\n",
+			kindToStr(sample.Kind()),
+			sample.KeyExpr(),
+			sample.Payload())
+
+		switch sample.Kind() {
+		case zenoh.SampleKindPut:
+			storage[keyexpr.String()] = sample
+		case zenoh.SampleKindDelete:
+			delete(storage, keyexpr.String())
+		}
+	}
+
 	fmt.Printf("Declaring Subscriber on '%s'...\n", keyexpr)
-	sub, err := session.DeclareSubscriber(keyexpr, dataHandler, nil, nil)
+	sub, err := session.DeclareSubscriber(keyexpr, subHandler, nil, nil)
 	if err != nil {
 		fmt.Println("Unable to declare subscriber.")
 		os.Exit(-1)
 	}
 	defer sub.Drop()
+
+	opts := zenoh.QueryableOptions{}
+	opts.Complete = args.complete
+	queryableHandler := func(query zenoh.Query) {
+		defer query.Drop()
+		for _, s := range storage {
+			if s.KeyExpr().Intersects(query.KeyExpr()) {
+				query.Reply(s.KeyExpr(), s.Payload(), nil)
+			}
+		}
+	}
+	queryable, err := session.DeclareQueryable(keyexpr, queryableHandler, nil, &opts)
+	if err != nil {
+		fmt.Println("Unable to declare queryable.")
+		os.Exit(-1)
+	}
+	defer queryable.Drop()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -83,12 +103,16 @@ func kindToStr(kind zenoh.SampleKind) string {
 const defaultKeyexpr = "demo/example/**"
 
 type Args struct {
-	keyexpr string
-	config  zenoh.Config
+	keyexpr  string
+	complete bool
+	config   zenoh.Config
 }
 
 func parseArgs() Args {
 	var keyexpr string
-	pflag.StringVarP(&keyexpr, "key", "k", defaultKeyexpr, "The key expression to subscribe to.")
-	return Args{keyexpr: keyexpr, config: utils.ParseConfig()}
+	var complete bool
+
+	pflag.StringVarP(&keyexpr, "key", "k", defaultKeyexpr, "The selection of resources to store.")
+	pflag.BoolVar(&complete, "complete", false, "Indicates whether storage is complete or not.")
+	return Args{keyexpr: keyexpr, complete: complete, config: utils.ParseConfig()}
 }
