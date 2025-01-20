@@ -38,5 +38,12 @@ jobs:
         export CGO_LDFLAGS="-L$HOME/local/lib"
         make
 
+    - name: Run tests
+      run: |
+        export CGO_CFLAGS="-I$HOME/local/include"
+        export CGO_LDFLAGS="-L$HOME/local/lib"
+        export LD_LIBRARY_PATH="$HOME/local/lib"
+        go test ./tests
+
     - name: Check code format
       run: make fmt
