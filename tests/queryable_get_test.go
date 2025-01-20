@@ -50,6 +50,7 @@ func TestQueryableGet(t *testing.T) {
 	wg.Add(3)
 
 	queryHandler := func(q zenoh.Query) {
+		defer q.Drop()
 		payload := q.Payload().Unwrap().String()
 		qd := QueryData{
 			key:     q.KeyExpr().String(),
