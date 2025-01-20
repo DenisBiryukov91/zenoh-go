@@ -44,6 +44,7 @@ type KeyExpr struct {
 func (keyexpr *KeyExpr) toC(pinner *runtime.Pinner) C.z_view_keyexpr_t {
 	pinner.Pin(&keyexpr.keyexpr)
 	var out C.z_view_keyexpr_t
+	pinner.Pin(&keyexpr.keyexpr[0])
 	C.z_view_keyexpr_from_substr_unchecked(&out, (*C.char)(unsafe.Pointer(&keyexpr.keyexpr[0])), C.size_t(len(keyexpr.keyexpr)))
 	return out
 }
