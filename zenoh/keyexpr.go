@@ -15,6 +15,7 @@
 package zenoh
 
 // #include "zenoh.h"
+// #include "zenoh_cgo.h"
 // static const int8_t CGO_Z_EINVAL = Z_EINVAL;
 import "C"
 import (
@@ -49,11 +50,13 @@ func (keyexpr *KeyExpr) toC(pinner *runtime.Pinner) C.z_view_keyexpr_t {
 	return out
 }
 
-func newKeyExprFromC(keyexpr *C.z_loaned_keyexpr_t) KeyExpr {
-	var s C.z_view_string_t
-	C.z_keyexpr_as_view_string(keyexpr, &s)
-	loanedString := C.z_view_string_loan(&s)
-	ke := KeyExpr{keyexpr: C.GoBytes(unsafe.Pointer(C.z_string_data(loanedString)), C.int(C.z_string_len(loanedString)))}
+func (keyexpr *KeyExpr) toCData(pinner *runtime.Pinner) C.zc_cgo_string_data_t {
+	pinner.Pin(&keyexpr.keyexpr[0])
+	return C.zc_cgo_string_data_t{str_ptr: (*C.char)(unsafe.Pointer(&keyexpr.keyexpr[0])), len: C.size_t(len(keyexpr.keyexpr))}
+}
+
+func newKeyExprFromC(keyexpr C.zc_cgo_string_data_t) KeyExpr {
+	ke := KeyExpr{keyexpr: C.GoBytes(unsafe.Pointer(keyexpr.str_ptr), C.int(keyexpr.len))}
 	return ke
 }
 

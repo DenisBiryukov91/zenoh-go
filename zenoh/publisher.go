@@ -15,6 +15,7 @@
 package zenoh
 
 // #include "zenoh.h"
+// #include "zenoh_cgo.h"
 import "C"
 import (
 	"runtime"
@@ -33,24 +34,24 @@ type PublisherPutOptions struct {
 	TimeStamp   option.Option[TimeStamp] // The timestamp of the publication.
 }
 
-func (opts *PublisherPutOptions) toCOpts(pinner *runtime.Pinner) C.z_publisher_put_options_t {
+func (opts *PublisherPutOptions) toCOpts(pinner *runtime.Pinner) (C.z_publisher_put_options_t, *C.zc_internal_encoding_data_t, *C.zc_cgo_bytes_data_t) {
 	var cOpts C.z_publisher_put_options_t
 	C.z_publisher_put_options_default(&cOpts)
+	encoding := (*C.zc_internal_encoding_data_t)(nil)
+	attachment := (*C.zc_cgo_bytes_data_t)(nil)
 	if opts.Attachement.IsSome() {
-		cAttachment := opts.Attachement.Unwrap().toC()
-		pinner.Pin(&cAttachment)
-		cOpts.attachment = C.z_bytes_move(&cAttachment)
+		cAttachment := opts.Attachement.Unwrap().toCData(pinner)
+		attachment = &cAttachment
 	}
 	if opts.Encoding.IsSome() {
-		cEncoding := opts.Encoding.Unwrap().toC()
-		pinner.Pin(&cEncoding)
-		cOpts.encoding = C.z_encoding_move(&cEncoding)
+		cEncoding := opts.Encoding.Unwrap().toCData(pinner)
+		encoding = &cEncoding
 	}
 	if opts.TimeStamp.IsSome() {
 		var c_timestamp = opts.TimeStamp.Unwrap().timestamp
 		cOpts.timestamp = &c_timestamp
 	}
-	return cOpts
+	return cOpts, encoding, attachment
 }
 
 // Options passed to Publisher Delete operation.
@@ -85,14 +86,14 @@ func (publisher *Publisher) Drop() {
 
 // Publish message onto the publisher's key expression.
 func (publisher *Publisher) Put(payload ZBytes, options *PublisherPutOptions) error {
-	cPayload := payload.toC()
 	pinner := runtime.Pinner{}
+	cPayload := payload.toCData(&pinner)
 	res := int8(0)
 	if options == nil {
-		res = int8(C.z_publisher_put(C.z_publisher_loan(publisher.publisher), C.z_bytes_move(&cPayload), nil))
+		res = int8(C.zc_cgo_publisher_put(publisher.publisher, cPayload, nil, nil, nil))
 	} else {
-		cOpts := options.toCOpts(&pinner)
-		res = int8(C.z_publisher_put(C.z_publisher_loan(publisher.publisher), C.z_bytes_move(&cPayload), &cOpts))
+		cOpts, encoding, attachment := options.toCOpts(&pinner)
+		res = int8(C.zc_cgo_publisher_put(publisher.publisher, cPayload, &cOpts, encoding, attachment))
 	}
 	pinner.Unpin()
 
@@ -107,10 +108,10 @@ func (publisher *Publisher) Delete(options *PublisherDeleteOptions) error {
 	pinner := runtime.Pinner{}
 	res := int8(0)
 	if options == nil {
-		res = int8(C.z_publisher_delete(C.z_publisher_loan(publisher.publisher), nil))
+		res = int8(C.zc_cgo_publisher_delete(publisher.publisher, nil))
 	} else {
 		cOpts := options.toCOpts(&pinner)
-		res = int8(C.z_publisher_delete(C.z_publisher_loan(publisher.publisher), &cOpts))
+		res = int8(C.zc_cgo_publisher_delete(publisher.publisher, &cOpts))
 	}
 	pinner.Unpin()
 
@@ -122,7 +123,7 @@ func (publisher *Publisher) Delete(options *PublisherDeleteOptions) error {
 
 // Get the key expression of the publisher.
 func (publisher *Publisher) KeyExpr() KeyExpr {
-	return newKeyExprFromC(C.z_publisher_keyexpr(C.z_publisher_loan(publisher.publisher)))
+	return newKeyExprFromC(C.zc_cgo_keyexpr_get_data(C.z_publisher_keyexpr(C.z_publisher_loan(publisher.publisher))))
 }
 
 // Options passed to publisher declaration.
@@ -185,18 +186,18 @@ type PutOptions struct {
 	IsExpress         bool                             // If set to ``true``, the message will not be batched. This usually has a positive impact on latency but negative impact on throughput.
 }
 
-func (opts *PutOptions) toCOpts(pinner *runtime.Pinner) C.z_put_options_t {
+func (opts *PutOptions) toCOpts(pinner *runtime.Pinner) (C.z_put_options_t, *C.zc_internal_encoding_data_t, *C.zc_cgo_bytes_data_t) {
 	var cOpts C.z_put_options_t
 	C.z_put_options_default(&cOpts)
+	encoding := (*C.zc_internal_encoding_data_t)(nil)
+	attachment := (*C.zc_cgo_bytes_data_t)(nil)
 	if opts.Attachement.IsSome() {
-		cAttachment := opts.Attachement.Unwrap().toC()
-		pinner.Pin(&cAttachment)
-		cOpts.attachment = C.z_bytes_move(&cAttachment)
+		cAttachment := opts.Attachement.Unwrap().toCData(pinner)
+		attachment = &cAttachment
 	}
 	if opts.Encoding.IsSome() {
-		cEncoding := opts.Encoding.Unwrap().toC()
-		pinner.Pin(&cEncoding)
-		cOpts.encoding = C.z_encoding_move(&cEncoding)
+		cEncoding := opts.Encoding.Unwrap().toCData(pinner)
+		encoding = &cEncoding
 	}
 	if opts.TimeStamp.IsSome() {
 		var c_timestamp = opts.TimeStamp.Unwrap().timestamp
@@ -209,7 +210,7 @@ func (opts *PutOptions) toCOpts(pinner *runtime.Pinner) C.z_put_options_t {
 		cOpts.congestion_control = uint32(opts.CongestionControl.Unwrap())
 	}
 	cOpts.is_express = C.bool(opts.IsExpress)
-	return cOpts
+	return cOpts, encoding, attachment
 }
 
 // Options passed to Session Delete operation.
@@ -239,15 +240,15 @@ func (opts *DeleteOptions) toCOpts(_ *runtime.Pinner) C.z_delete_options_t {
 
 // Publish data on specified key expression.
 func (session *Session) Put(keyExpr KeyExpr, payload ZBytes, options *PutOptions) error {
-	cPayload := payload.toC()
 	pinner := runtime.Pinner{}
-	cKeyexpr := keyExpr.toC(&pinner)
+	cPayload := payload.toCData(&pinner)
+	cKeyexpr := keyExpr.toCData(&pinner)
 	res := int8(0)
 	if options == nil {
-		res = int8(C.z_put(C.z_session_loan(session.session), C.z_view_keyexpr_loan(&cKeyexpr), C.z_bytes_move(&cPayload), nil))
+		res = int8(C.zc_cgo_put(session.session, cKeyexpr, cPayload, nil, nil, nil))
 	} else {
-		cOpts := options.toCOpts(&pinner)
-		res = int8(C.z_put(C.z_session_loan(session.session), C.z_view_keyexpr_loan(&cKeyexpr), C.z_bytes_move(&cPayload), &cOpts))
+		cOpts, encoding, attachment := options.toCOpts(&pinner)
+		res = int8(C.zc_cgo_put(session.session, cKeyexpr, cPayload, &cOpts, encoding, attachment))
 	}
 	pinner.Unpin()
 
@@ -262,13 +263,13 @@ func (session *Session) Put(keyExpr KeyExpr, payload ZBytes, options *PutOptions
 // [Zenoh storages]: https://zenoh.io/docs/manual/abstractions/#storage
 func (session *Session) Delete(keyExpr KeyExpr, options *DeleteOptions) error {
 	pinner := runtime.Pinner{}
-	cKeyexpr := keyExpr.toC(&pinner)
+	cKeyexpr := keyExpr.toCData(&pinner)
 	res := int8(0)
 	if options == nil {
-		res = int8(C.z_delete(C.z_session_loan(session.session), C.z_view_keyexpr_loan(&cKeyexpr), nil))
+		res = int8(C.zc_cgo_delete(session.session, cKeyexpr, nil))
 	} else {
 		cOpts := options.toCOpts(&pinner)
-		res = int8(C.z_delete(C.z_session_loan(session.session), C.z_view_keyexpr_loan(&cKeyexpr), &cOpts))
+		res = int8(C.zc_cgo_delete(session.session, cKeyexpr, &cOpts))
 	}
 	pinner.Unpin()
 

@@ -15,16 +15,15 @@
 package zenoh
 
 // #include "zenoh.h"
-// void zenohSubscriberCallback(struct z_loaned_sample_t *sample, void *context);
-// void zenohSubscriberDrop(void *context);
+// #include "zenoh_cgo.h"
 import "C"
 import (
 	"runtime"
 	"unsafe"
 )
 
-//export zenohSubscriberCallback
-func zenohSubscriberCallback(sample *C.z_loaned_sample_t, context unsafe.Pointer) {
+//export zenohSubscriberCallbackData
+func zenohSubscriberCallbackData(sample C.zc_cgo_sample_data_t, context unsafe.Pointer) {
 	(*closureContext[Sample])(context).call(newSampleFromC(sample))
 }
 
@@ -58,7 +57,7 @@ func (subscriber *Subscriber) Drop() {
 }
 
 func (subscriber *Subscriber) KeyExpr() KeyExpr {
-	return newKeyExprFromC(C.z_subscriber_keyexpr(C.z_subscriber_loan(subscriber.subscriber)))
+	return newKeyExprFromC(C.zc_cgo_keyexpr_get_data(C.z_subscriber_keyexpr(C.z_subscriber_loan(subscriber.subscriber))))
 }
 
 // Options passed to subscriber declaration

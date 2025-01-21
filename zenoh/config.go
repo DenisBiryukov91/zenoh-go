@@ -15,6 +15,7 @@
 package zenoh
 
 // #include "zenoh.h"
+// #include "zenoh_cgo.h"
 // static const int8_t CGO_Z_EINVAL = Z_EINVAL;
 import "C"
 import (
@@ -101,7 +102,7 @@ func (config *Config) Get(key string) (string, error) {
 	}
 	loanedString := C.z_string_loan(&s)
 	out := C.GoStringN(C.z_string_data(loanedString), C.int(C.z_string_len(loanedString)))
-	C.z_string_drop(C.z_string_move(&s))
+	C.zc_cgo_string_drop(&s)
 	return out, nil
 }
 
@@ -112,7 +113,7 @@ func (config *Config) String() string {
 	C.zc_config_to_string(loanedConfig, &s)
 	loanedString := C.z_string_loan(&s)
 	out := C.GoStringN(C.z_string_data(loanedString), C.int(C.z_string_len(loanedString)))
-	C.z_string_drop(C.z_string_move(&s))
+	C.zc_cgo_string_drop(&s)
 	return out
 }
 

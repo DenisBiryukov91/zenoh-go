@@ -15,6 +15,7 @@
 package zenoh
 
 // #include "zenoh.h"
+// #include "zenoh_cgo.h"
 import "C"
 import "github.com/BooleanCat/option"
 
@@ -32,13 +33,6 @@ func (reply_error *ReplyError) Payload() ZBytes {
 // Return the encoding associated with the error data.
 func (reply_error *ReplyError) Encoding() Encoding {
 	return reply_error.encoding
-}
-
-func newReplyErrorFromC(c_reply_error *C.z_loaned_reply_err_t) ReplyError {
-	var e ReplyError
-	e.payload = newZBytesFromC(C.z_reply_err_payload(c_reply_error))
-	e.encoding = newEncodingFromC(C.z_reply_err_encoding(c_reply_error))
-	return e
 }
 
 type replyErr struct {
@@ -76,11 +70,24 @@ type Reply interface {
 	IsOk() bool                     // Return ``true`` if reply contains a valid response, ``false`` otherwise (in this case it contains a error value).
 }
 
-func newReplyFromC(c_reply *C.z_loaned_reply_t) Reply {
-	cSample := C.z_reply_ok(c_reply)
-	if cSample != nil {
-		return &replyOk{value: newSampleFromC(cSample)}
+func newReplyFromC(cReplyData C.zc_cgo_reply_data_t) Reply {
+	if cReplyData.is_ok {
+		var s Sample
+		s.payload = newZBytesFromC(cReplyData.payload)
+		s.keyexpr = newKeyExprFromC(cReplyData.keyexpr)
+		s.encoding = newEncodingFromC(cReplyData.encoding)
+		s.kind = SampleKind(cReplyData.kind)
+		if cReplyData.timestamp != nil {
+			s.timestamp = option.Some(TimeStamp{timestamp: *cReplyData.timestamp})
+		}
+		if cReplyData.attachment.len != 0 {
+			s.attachment = option.Some(newZBytesFromC(cReplyData.attachment))
+		}
+		return &replyOk{value: s}
 	} else {
-		return &replyErr{value: newReplyErrorFromC(C.z_reply_err(c_reply))}
+		var e ReplyError
+		e.payload = newZBytesFromC(cReplyData.payload)
+		e.encoding = newEncodingFromC(cReplyData.encoding)
+		return &replyErr{value: e}
 	}
 }

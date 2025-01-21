@@ -15,10 +15,9 @@
 package zenoh
 
 // #include "zenoh.h"
+// #include "zenoh_cgo.h"
 // static const z_consolidation_mode_t CGO_Z_CONSOLIDATION_MODE_DEFAULT = Z_CONSOLIDATION_MODE_DEFAULT;
 // static const z_query_target_t CGO_Z_QUERY_TARGET_DEFAULT = Z_QUERY_TARGET_DEFAULT;
-// void zenohGetCallback(struct z_loaned_reply_t *reply, void *context);
-// void zenohGetDrop(void *context);
 import "C"
 import (
 	"runtime"
@@ -82,23 +81,23 @@ type GetOptions struct {
 	TimeoutMs         uint64                            // The timeout for the query in milliseconds. 0 means default query timeout from zenoh configuration.
 }
 
-func (opts *GetOptions) toCOpts(pinner *runtime.Pinner) C.z_get_options_t {
+func (opts *GetOptions) toCOpts(pinner *runtime.Pinner) (C.z_get_options_t, *C.zc_cgo_bytes_data_t, *C.zc_internal_encoding_data_t, *C.zc_cgo_bytes_data_t) {
 	var cOpts C.z_get_options_t
 	C.z_get_options_default(&cOpts)
+	payload := (*C.zc_cgo_bytes_data_t)(nil)
+	encoding := (*C.zc_internal_encoding_data_t)(nil)
+	attachment := (*C.zc_cgo_bytes_data_t)(nil)
 	if opts.Payload.IsSome() {
-		cPayload := opts.Payload.Unwrap().toC()
-		pinner.Pin(&cPayload)
-		cOpts.payload = C.z_bytes_move(&cPayload)
+		cPayloadData := opts.Payload.Unwrap().toCData(pinner)
+		payload = &cPayloadData
 	}
 	if opts.Attachement.IsSome() {
-		cAttachment := opts.Attachement.Unwrap().toC()
-		pinner.Pin(&cAttachment)
-		cOpts.attachment = C.z_bytes_move(&cAttachment)
+		cAttachmentData := opts.Attachement.Unwrap().toCData(pinner)
+		attachment = &cAttachmentData
 	}
 	if opts.Encoding.IsSome() {
-		cEncoding := opts.Encoding.Unwrap().toC()
-		pinner.Pin(&cEncoding)
-		cOpts.encoding = C.z_encoding_move(&cEncoding)
+		cEncoding := opts.Encoding.Unwrap().toCData(pinner)
+		encoding = &cEncoding
 	}
 	if opts.Priority.IsSome() {
 		cOpts.priority = uint32(C.z_priority_t(opts.Priority.Unwrap()))
@@ -114,12 +113,12 @@ func (opts *GetOptions) toCOpts(pinner *runtime.Pinner) C.z_get_options_t {
 		cOpts.consolidation.mode = int32(opts.Consolidataion.Unwrap().mode)
 	}
 	cOpts.timeout_ms = C.uint64_t(opts.TimeoutMs)
-	return cOpts
+	return cOpts, payload, encoding, attachment
 }
 
-//export zenohGetCallback
-func zenohGetCallback(sample *C.z_loaned_reply_t, context unsafe.Pointer) {
-	(*closureContext[Reply])(context).call(newReplyFromC(sample))
+//export zenohGetCallbackData
+func zenohGetCallbackData(reply C.zc_cgo_reply_data_t, context unsafe.Pointer) {
+	(*closureContext[Reply])(context).call(newReplyFromC(reply))
 }
 
 //export zenohGetDrop
@@ -131,10 +130,8 @@ func zenohGetDrop(context unsafe.Pointer) {
 // Replies are provided through a callback function.
 func (session *Session) Get(keyexpr KeyExpr, parameters string, callback func(Reply), drop func(), get_options *GetOptions) error {
 	closure := newClosure(callback, drop)
-	var cClosure C.z_owned_closure_reply_t
-	C.z_closure_reply(&cClosure, (*[0]byte)(C.zenohGetCallback), (*[0]byte)(C.zenohGetDrop), unsafe.Pointer(closure))
 	pinner := runtime.Pinner{}
-	cKeyexpr := keyexpr.toC(&pinner)
+	cKeyexpr := keyexpr.toCData(&pinner)
 	cParams := (*C.char)(nil)
 	if len(parameters) != 0 {
 		cParams = C.CString(parameters)
@@ -142,10 +139,10 @@ func (session *Session) Get(keyexpr KeyExpr, parameters string, callback func(Re
 	}
 	res := int8(0)
 	if get_options == nil {
-		res = int8(C.z_get(C.z_session_loan(session.session), C.z_view_keyexpr_loan(&cKeyexpr), cParams, C.z_closure_reply_move(&cClosure), nil))
+		res = int8(C.zc_cgo_get(session.session, cKeyexpr, cParams, unsafe.Pointer(closure), nil, nil, nil, nil))
 	} else {
-		cOpts := get_options.toCOpts(&pinner)
-		res = int8(C.z_get(C.z_session_loan(session.session), C.z_view_keyexpr_loan(&cKeyexpr), cParams, C.z_closure_reply_move(&cClosure), &cOpts))
+		cOpts, payload, encoding, attachment := get_options.toCOpts(&pinner)
+		res = int8(C.zc_cgo_get(session.session, cKeyexpr, cParams, unsafe.Pointer(closure), &cOpts, payload, encoding, attachment))
 	}
 	pinner.Unpin()
 

@@ -15,6 +15,7 @@
 package zenoh
 
 // #include "zenoh.h"
+// #include "zenoh_cgo.h"
 // static const z_priority_t CGO_Z_PRIORITY_DEFAULT = Z_PRIORITY_DEFAULT;
 // static const z_congestion_control_t CGO_Z_CONGESTION_CONTROL_DEFAULT = Z_CONGESTION_CONTROL_DEFAULT;
 import "C"
@@ -56,7 +57,7 @@ func (id Id) String() string {
 	C.z_id_to_string(&id.id, &s)
 	loanedString := C.z_string_loan(&s)
 	out := C.GoStringN(C.z_string_data(loanedString), C.int(C.z_string_len(loanedString)))
-	C.z_string_drop(C.z_string_move(&s))
+	C.zc_cgo_string_drop(&s)
 	return out
 }
 

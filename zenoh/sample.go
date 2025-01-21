@@ -15,6 +15,7 @@
 package zenoh
 
 // #include "zenoh.h"
+// #include "zenoh_cgo.h"
 import "C"
 import "github.com/BooleanCat/option"
 
@@ -82,19 +83,17 @@ func (sample *Sample) IsExpress() bool {
 	return sample.qos.isExpress
 }
 
-func newSampleFromC(cSample *C.z_loaned_sample_t) Sample {
+func newSampleFromC(cSampleData C.zc_cgo_sample_data_t) Sample {
 	var s Sample
-	s.payload = newZBytesFromC(C.z_sample_payload(cSample))
-	s.keyexpr = newKeyExprFromC(C.z_sample_keyexpr(cSample))
-	s.encoding = newEncodingFromC(C.z_sample_encoding(cSample))
-	s.kind = SampleKind(C.z_sample_kind(cSample))
-	tsPtr := C.z_sample_timestamp(cSample)
-	if tsPtr != nil {
-		s.timestamp = option.Some(TimeStamp{timestamp: *tsPtr})
+	s.payload = newZBytesFromC(cSampleData.payload)
+	s.keyexpr = newKeyExprFromC(cSampleData.keyexpr)
+	s.encoding = newEncodingFromC(cSampleData.encoding)
+	s.kind = SampleKind(cSampleData.kind)
+	if cSampleData.timestamp != nil {
+		s.timestamp = option.Some(TimeStamp{timestamp: *cSampleData.timestamp})
 	}
-	attachmentPtr := C.z_sample_attachment(cSample)
-	if attachmentPtr != nil {
-		s.attachment = option.Some(newZBytesFromC(attachmentPtr))
+	if cSampleData.attachment.len != 0 {
+		s.attachment = option.Some(newZBytesFromC(cSampleData.attachment))
 	}
 	return s
 }

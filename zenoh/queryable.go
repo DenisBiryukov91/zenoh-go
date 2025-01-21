@@ -15,16 +15,15 @@
 package zenoh
 
 // #include "zenoh.h"
-// void zenohQueryableCallback(struct z_loaned_query_t *query, void *context);
-// void zenohQueryableDrop(void *context);
+// #include "zenoh_cgo.h"
 import "C"
 import (
 	"runtime"
 	"unsafe"
 )
 
-//export zenohQueryableCallback
-func zenohQueryableCallback(query *C.z_loaned_query_t, context unsafe.Pointer) {
+//export zenohQueryableCallbackData
+func zenohQueryableCallbackData(query C.zc_cgo_query_data_t, context unsafe.Pointer) {
 	(*closureContext[Query])(context).call(newQueryFromC(query))
 }
 

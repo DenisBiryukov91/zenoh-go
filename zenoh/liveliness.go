@@ -15,35 +15,12 @@
 package zenoh
 
 // #include "zenoh.h"
-// void zenohLivelinessSubscriberCallback(struct z_loaned_sample_t *sample, void *context);
-// void zenohLivelinessSubscriberDrop(void *context);
-// void zenohLivelinessGetCallback(struct z_loaned_reply_t *reply, void *context);
-// void zenohLivelinessGetDrop(void *context);
+// #include "zenoh_cgo.h"
 import "C"
 import (
 	"runtime"
 	"unsafe"
 )
-
-//export zenohLivelinessSubscriberCallback
-func zenohLivelinessSubscriberCallback(sample *C.z_loaned_sample_t, context unsafe.Pointer) {
-	(*closureContext[Sample])(context).call(newSampleFromC(sample))
-}
-
-//export zenohLivelinessSubscriberDrop
-func zenohLivelinessSubscriberDrop(context unsafe.Pointer) {
-	(*closureContext[Sample])(context).drop()
-}
-
-//export zenohLivelinessGetCallback
-func zenohLivelinessGetCallback(reply *C.z_loaned_reply_t, context unsafe.Pointer) {
-	(*closureContext[Reply])(context).call(newReplyFromC(reply))
-}
-
-//export zenohLivelinessGetDrop
-func zenohLivelinessGetDrop(context unsafe.Pointer) {
-	(*closureContext[Reply])(context).drop()
-}
 
 type Liveliness struct {
 	session *Session
@@ -125,7 +102,7 @@ func (opts *LivelinessSubscriberOptions) toCOpts(_ *runtime.Pinner) C.z_liveline
 func (liveliness *Liveliness) DeclareSubscriber(keyexpr KeyExpr, callback func(Sample), drop func(), options *LivelinessSubscriberOptions) (Subscriber, error) {
 	closure := newClosure(callback, drop)
 	var cClosure C.z_owned_closure_sample_t
-	C.z_closure_sample(&cClosure, (*[0]byte)(C.zenohLivelinessSubscriberCallback), (*[0]byte)(C.zenohLivelinessSubscriberDrop), unsafe.Pointer(closure))
+	C.z_closure_sample(&cClosure, (*[0]byte)(C.zenohSubscriberCallback), (*[0]byte)(C.zenohSubscriberDrop), unsafe.Pointer(closure))
 	pinner := runtime.Pinner{}
 	cKeyexpr := keyexpr.toC(&pinner)
 	res := int8(0)
@@ -159,16 +136,14 @@ func (opts *LivelinessGetOptions) toCOpts(_ *runtime.Pinner) C.z_liveliness_get_
 // Query liveliness tokens currently on the network with a key expression intersecting with `keyexpr`.
 func (liveliness *Liveliness) Get(keyexpr KeyExpr, callback func(Reply), drop func(), options *LivelinessGetOptions) error {
 	closure := newClosure(callback, drop)
-	var cClosure C.z_owned_closure_reply_t
-	C.z_closure_reply(&cClosure, (*[0]byte)(C.zenohLivelinessGetCallback), (*[0]byte)(C.zenohLivelinessGetDrop), unsafe.Pointer(closure))
 	pinner := runtime.Pinner{}
-	cKeyexpr := keyexpr.toC(&pinner)
+	cKeyexpr := keyexpr.toCData(&pinner)
 	res := int8(0)
 	if options == nil {
-		res = int8(C.z_liveliness_get(C.z_session_loan(liveliness.session.session), C.z_view_keyexpr_loan(&cKeyexpr), C.z_closure_reply_move(&cClosure), nil))
+		res = int8(C.zc_cgo_liveliness_get(liveliness.session.session, cKeyexpr, unsafe.Pointer(closure), nil))
 	} else {
 		cOpts := options.toCOpts(&pinner)
-		res = int8(C.z_liveliness_get(C.z_session_loan(liveliness.session.session), C.z_view_keyexpr_loan(&cKeyexpr), C.z_closure_reply_move(&cClosure), &cOpts))
+		res = int8(C.zc_cgo_liveliness_get(liveliness.session.session, cKeyexpr, unsafe.Pointer(closure), &cOpts))
 	}
 	pinner.Unpin()
 

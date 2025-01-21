@@ -15,8 +15,12 @@
 package zenoh
 
 // #include "zenoh.h"
+// #include "zenoh_cgo.h"
 import "C"
-import "unsafe"
+import (
+	"runtime"
+	"unsafe"
+)
 
 // A Zenoh data.
 type ZBytes struct {
@@ -58,13 +62,26 @@ func (zbytes ZBytes) toC() C.z_owned_bytes_t {
 	return out
 }
 
-func newZBytesFromC(cZbytes *C.z_loaned_bytes_t) ZBytes {
+func (zbytes ZBytes) toCData(pinner *runtime.Pinner) C.zc_cgo_bytes_data_t {
+	var out C.zc_cgo_bytes_data_t
+	if len(zbytes.data) > 0 {
+		pinner.Pin(&zbytes.data[0])
+		out.data = (*C.uint8_t)(unsafe.Pointer(&zbytes.data[0]))
+		out.len = C.size_t(len(zbytes.data))
+	}
+	return out
+}
+
+func newZBytesFromC(cZbytes C.zc_cgo_bytes_data_t) ZBytes {
 	var b ZBytes
-	size := C.z_bytes_len(cZbytes)
-	b.data = make([]uint8, int(size))
+	size := int(cZbytes.len)
 	if size > 0 {
-		reader := C.z_bytes_get_reader(cZbytes)
-		C.z_bytes_reader_read(&reader, (*C.uint8_t)(unsafe.Pointer(&b.data[0])), size)
+		if cZbytes.data == nil {
+			b.data = make([]uint8, size)
+			C.zc_cgo_bytes_read_all(cZbytes.bytes, (*C.uint8_t)(unsafe.Pointer(&b.data[0])))
+		} else {
+			b.data = C.GoBytes(unsafe.Pointer(cZbytes.data), C.int(size))
+		}
 	}
 	return b
 }
