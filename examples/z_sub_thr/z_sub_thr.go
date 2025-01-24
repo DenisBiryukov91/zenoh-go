@@ -69,7 +69,7 @@ func main() {
 	stats := newStats(args.Samples, args.numMessages)
 	keyexpr, _ := zenoh.NewKeyExpr("test/thr")
 	fmt.Printf("Declaring Subscriber on '%s'...\n", keyexpr)
-	sub, err := session.DeclareSubscriber(keyexpr, func(sample zenoh.Sample) { stats.update(&sample) }, nil, nil)
+	sub, err := session.DeclareSubscriber(keyexpr, zenoh.Closure[zenoh.Sample]{Call: func(sample zenoh.Sample) { stats.update(&sample) }}, nil)
 	if err != nil {
 		fmt.Println("Unable to declare subscriber.")
 		os.Exit(-1)

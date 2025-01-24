@@ -46,12 +46,10 @@ func TestLivelinessGet(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	replies := make(chan zenoh.Reply, 3)
 	keyExpr, _ := zenoh.NewKeyExpr(ke)
-	session2.Liveliness().Get(
+	replies, _ := session2.Liveliness().Get(
 		keyExpr,
-		func(reply zenoh.Reply) { replies <- reply },
-		func() { close(replies) },
+		zenoh.NewFifoChannel[zenoh.Reply](3),
 		nil,
 	)
 
@@ -70,11 +68,9 @@ func TestLivelinessGet(t *testing.T) {
 	token.Drop()
 	time.Sleep(1 * time.Second)
 
-	replies = make(chan zenoh.Reply, 3)
-	session2.Liveliness().Get(
+	replies, _ = session2.Liveliness().Get(
 		keyExpr,
-		func(reply zenoh.Reply) { replies <- reply },
-		func() { close(replies) },
+		zenoh.NewFifoChannel[zenoh.Reply](3),
 		nil,
 	)
 
@@ -110,7 +106,7 @@ func TestLivelinessSubscriber(t *testing.T) {
 	keyExpr, _ := zenoh.NewKeyExpr(ke)
 	sub, err := session1.Liveliness().DeclareSubscriber(
 		keyExpr,
-		func(sample zenoh.Sample) {
+		zenoh.Closure[zenoh.Sample]{Call: func(sample zenoh.Sample) {
 			mu.Lock()
 			defer mu.Unlock()
 			if sample.Kind() == zenoh.SampleKindPut {
@@ -120,7 +116,7 @@ func TestLivelinessSubscriber(t *testing.T) {
 				deleteTokens[sample.KeyExpr().String()] = true
 				wg.Done()
 			}
-		}, nil, nil)
+		}}, nil)
 	if err != nil {
 		t.Fatalf("Failed to declare liveliness subscriber: %v", err)
 	}

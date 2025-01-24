@@ -18,24 +18,12 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"time"
 	"zenoh-go/examples/utils"
 	"zenoh-go/zenoh"
 
 	"github.com/spf13/pflag"
 )
-
-func dataHandler(sample zenoh.Sample) {
-	fmt.Printf(">> [Subscriber] Received %s ('%s': '%s')",
-		kindToStr(sample.Kind()),
-		sample.KeyExpr().String(),
-		sample.Payload().String())
-
-	// check if attachment exists
-	if sample.Attachement().IsSome() {
-		fmt.Printf(" (%s)", sample.Attachement().Unwrap().String())
-	}
-	fmt.Print("\n")
-}
 
 func main() {
 	zenoh.InitLoggerFromEnvOr("error")
@@ -56,7 +44,7 @@ func main() {
 	}
 
 	fmt.Printf("Declaring Subscriber on '%s'...\n", keyexpr)
-	sub, err := session.DeclareSubscriber(keyexpr, zenoh.Closure[zenoh.Sample]{Call: dataHandler}, nil)
+	sub, err := session.DeclareSubscriber(keyexpr, zenoh.NewRingChannel[zenoh.Sample](int(args.size)), nil)
 	if err != nil {
 		fmt.Println("Unable to declare subscriber.")
 		os.Exit(-1)
@@ -66,7 +54,24 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	fmt.Println("Press CTRL-C to quit...")
-	<-stop
+
+	for {
+		select {
+		case <-stop:
+			{
+				return
+			}
+		case sample := <-sub.Handler():
+			{
+				fmt.Printf(">> [Subscriber] Pulled %s ('%s': '%s')... performing a computation of %vs\n",
+					kindToStr(sample.Kind()),
+					sample.KeyExpr().String(),
+					sample.Payload().String(),
+					args.interval)
+				time.Sleep(time.Duration(args.interval * float32(time.Second)))
+			}
+		}
+	}
 }
 
 func kindToStr(kind zenoh.SampleKind) string {
@@ -81,14 +86,22 @@ func kindToStr(kind zenoh.SampleKind) string {
 }
 
 const defaultKeyexpr = "demo/example/**"
+const defaultSize = 3
+const defaultInterval = 5.0
 
 type Args struct {
-	keyexpr string
-	config  zenoh.Config
+	keyexpr  string
+	size     uint32
+	interval float32
+	config   zenoh.Config
 }
 
 func parseArgs() Args {
 	var keyexpr string
+	var size uint32
+	var interval float32
 	pflag.StringVarP(&keyexpr, "key", "k", defaultKeyexpr, "The key expression to subscribe to.")
-	return Args{keyexpr: keyexpr, config: utils.ParseConfig()}
+	pflag.Uint32VarP(&size, "size", "s", defaultSize, "The size of the ringbuffer.")
+	pflag.Float32VarP(&interval, "interval", "i", defaultInterval, "The interval for pulling the ringbuffer in seconds.")
+	return Args{keyexpr: keyexpr, size: size, interval: interval, config: utils.ParseConfig()}
 }

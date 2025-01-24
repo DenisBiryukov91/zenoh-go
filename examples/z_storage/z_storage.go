@@ -59,7 +59,7 @@ func main() {
 	}
 
 	fmt.Printf("Declaring Subscriber on '%s'...\n", keyexpr)
-	sub, err := session.DeclareSubscriber(keyexpr, subHandler, nil, nil)
+	sub, err := session.DeclareSubscriber(keyexpr, zenoh.Closure[zenoh.Sample]{Call: subHandler}, nil)
 	if err != nil {
 		fmt.Println("Unable to declare subscriber.")
 		os.Exit(-1)
@@ -76,7 +76,7 @@ func main() {
 			}
 		}
 	}
-	queryable, err := session.DeclareQueryable(keyexpr, queryableHandler, nil, &opts)
+	queryable, err := session.DeclareQueryable(keyexpr, zenoh.Closure[zenoh.Query]{Call: queryableHandler}, &opts)
 	if err != nil {
 		fmt.Println("Unable to declare queryable.")
 		os.Exit(-1)

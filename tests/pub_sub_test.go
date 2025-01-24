@@ -20,8 +20,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"zenoh-go/zenoh"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPubSub(t *testing.T) {
@@ -38,10 +39,11 @@ func TestPubSub(t *testing.T) {
 	receivedMessages := []string{}
 	wg.Add(2)
 
-	_, _ = sessionSub.DeclareSubscriber(keyexpr, func(sample zenoh.Sample) {
-		receivedMessages = append(receivedMessages, sample.Payload().String())
-		wg.Done()
-	}, nil, nil)
+	_, _ = sessionSub.DeclareSubscriber(keyexpr,
+		zenoh.Closure[zenoh.Sample]{Call: func(sample zenoh.Sample) {
+			receivedMessages = append(receivedMessages, sample.Payload().String())
+			wg.Done()
+		}}, nil)
 
 	time.Sleep(1 * time.Second)
 
@@ -67,10 +69,10 @@ func TestPutSub(t *testing.T) {
 	receivedMessages := []string{}
 	wg.Add(2)
 
-	_, _ = sessionSub.DeclareSubscriber(keyexpr, func(sample zenoh.Sample) {
+	_, _ = sessionSub.DeclareSubscriber(keyexpr, zenoh.Closure[zenoh.Sample]{Call: func(sample zenoh.Sample) {
 		receivedMessages = append(receivedMessages, sample.Payload().String())
 		wg.Done()
-	}, nil, nil)
+	}}, nil)
 
 	time.Sleep(1 * time.Second)
 
@@ -91,33 +93,67 @@ func TestPutSubFifoChannel(t *testing.T) {
 	defer sessionSub.Drop()
 
 	keyexpr, _ := zenoh.NewKeyExpr("zenoh/test")
-	ch := make(chan zenoh.Sample, 2)
 
-	_, _ = sessionSub.DeclareSubscriber(keyexpr, func(sample zenoh.Sample) {
-		ch <- sample
-	}, nil, nil)
-
+	sub, _ := sessionSub.DeclareSubscriber(keyexpr, zenoh.NewFifoChannel[zenoh.Sample](2), nil)
 	time.Sleep(1 * time.Second)
 
 	sessionPub.Put(keyexpr, zenoh.NewZBytesFromString("first"), nil)
 	sessionPub.Put(keyexpr, zenoh.NewZBytesFromString("second"), nil)
 
 	select {
-	case sample := <-ch:
+	case sample := <-sub.Handler():
 		assert.Equal(t, "first", sample.Payload().String())
 	case <-time.After(2 * time.Second):
 		t.Fatal("Timeout waiting for first message")
 	}
 
 	select {
-	case sample := <-ch:
+	case sample := <-sub.Handler():
 		assert.Equal(t, "second", sample.Payload().String())
 	case <-time.After(2 * time.Second):
 		t.Fatal("Timeout waiting for second message")
 	}
 
 	select {
-	case <-ch:
+	case <-sub.Handler():
+		t.Fatal("Unexpected message received")
+	case <-time.After(1 * time.Second):
+		fmt.Println("No more data, as expected.")
+	}
+}
+
+func TestPutSubRingChannel(t *testing.T) {
+	sessionPub, _ := zenoh.Open(zenoh.NewConfigDefault(), nil)
+	defer sessionPub.Drop()
+	sessionSub, _ := zenoh.Open(zenoh.NewConfigDefault(), nil)
+	defer sessionSub.Drop()
+
+	keyexpr, _ := zenoh.NewKeyExpr("zenoh/test")
+
+	sub, _ := sessionSub.DeclareSubscriber(keyexpr, zenoh.NewRingChannel[zenoh.Sample](2), nil)
+	time.Sleep(1 * time.Second)
+
+	sessionPub.Put(keyexpr, zenoh.NewZBytesFromString("first"), nil)
+	sessionPub.Put(keyexpr, zenoh.NewZBytesFromString("second"), nil)
+	sessionPub.Put(keyexpr, zenoh.NewZBytesFromString("third"), nil)
+	time.Sleep(1 * time.Second)
+
+	select {
+	case sample := <-sub.Handler():
+		assert.Equal(t, "second", sample.Payload().String())
+	case <-time.After(2 * time.Second):
+		t.Fatal("Timeout waiting for first message")
+	}
+
+	select {
+	case sample := <-sub.Handler():
+		assert.Equal(t, "third", sample.Payload().String())
+	case <-time.After(2 * time.Second):
+		t.Fatal("Timeout waiting for second message")
+	}
+
+	select {
+	case <-sub.Handler():
 		t.Fatal("Unexpected message received")
 	case <-time.After(1 * time.Second):
 		fmt.Println("No more data, as expected.")

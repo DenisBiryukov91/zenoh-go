@@ -39,6 +39,7 @@ func zenohSubscriberDrop(context unsafe.Pointer) {
 // [subscriber]: https://zenoh.io/docs/manual/abstractions/#subscriber.
 type Subscriber struct {
 	subscriber *C.z_owned_subscriber_t
+	receiver   <-chan Sample
 }
 
 // Undeclare and destroy the subscriber.
@@ -48,6 +49,11 @@ func (subscriber *Subscriber) Undeclare() error {
 		return nil
 	}
 	return NewZError(res, "Failed to undeclare Subscriber")
+}
+
+// Return Subscriber receiver if it was constructed with channel, nil otherwise.
+func (subscriber *Subscriber) Handler() <-chan Sample {
+	return subscriber.receiver
 }
 
 // Destroy the subscriber.
@@ -72,7 +78,8 @@ func (opts *SubscriberOptions) toCOpts(_ *runtime.Pinner) C.z_subscriber_options
 
 // Construct a subscriber for the given key expression.
 // Queryable MUST be explicitly destroyed using [Subscriber.Undeclare] or [Subscriber.Drop] once it is no longer needed.
-func (session *Session) DeclareSubscriber(keyexpr KeyExpr, callback func(Sample), drop func(), options *SubscriberOptions) (Subscriber, error) {
+func (session *Session) DeclareSubscriber(keyexpr KeyExpr, handler Handler[Sample], options *SubscriberOptions) (Subscriber, error) {
+	callback, drop, recv := handler.ToCbDropHandler()
 	closure := newClosure(callback, drop)
 	var cClosure C.z_owned_closure_sample_t
 	C.z_closure_sample(&cClosure, (*[0]byte)(C.zenohSubscriberCallback), (*[0]byte)(C.zenohSubscriberDrop), unsafe.Pointer(closure))
@@ -89,17 +96,17 @@ func (session *Session) DeclareSubscriber(keyexpr KeyExpr, callback func(Sample)
 	pinner.Unpin()
 
 	if res == 0 {
-		return Subscriber{subscriber: &cSubscriber}, nil
+		return Subscriber{subscriber: &cSubscriber, receiver: recv}, nil
 	}
 	return Subscriber{}, NewZError(res, "Failed to declare Subscriber")
 }
 
 // Construct and declare a background subscriber. Subscriber callback will be called to process the messages,
 // until the corresponding session is closed or dropped.
-func (session *Session) DeclareBackgroundSubscriber(keyexpr KeyExpr, callback func(Sample), drop func(), options *SubscriberOptions) error {
-	closure := newClosure(callback, drop)
+func (session *Session) DeclareBackgroundSubscriber(keyexpr KeyExpr, closure Closure[Sample], options *SubscriberOptions) error {
+	subClosure := newClosure(closure.Call, closure.Drop)
 	var cClosure C.z_owned_closure_sample_t
-	C.z_closure_sample(&cClosure, (*[0]byte)(C.zenohSubscriberCallback), (*[0]byte)(C.zenohSubscriberDrop), unsafe.Pointer(closure))
+	C.z_closure_sample(&cClosure, (*[0]byte)(C.zenohSubscriberCallback), (*[0]byte)(C.zenohSubscriberDrop), unsafe.Pointer(subClosure))
 	pinner := runtime.Pinner{}
 	cKeyexpr := keyexpr.toC(&pinner)
 	res := int8(0)

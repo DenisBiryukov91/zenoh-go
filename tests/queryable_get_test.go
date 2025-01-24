@@ -66,7 +66,7 @@ func TestQueryableGet(t *testing.T) {
 		}
 	}
 
-	queryable, _ := session1.DeclareQueryable(ke, queryHandler, nil, nil)
+	queryable, _ := session1.DeclareQueryable(ke, zenoh.Closure[zenoh.Query]{Call: queryHandler}, nil)
 	defer queryable.Drop()
 
 	time.Sleep(1 * time.Second)
@@ -76,16 +76,17 @@ func TestQueryableGet(t *testing.T) {
 			Payload:   option.Some(zenoh.NewZBytesFromString(payload)),
 			TimeoutMs: 1000,
 		}
-		session2.Get(selector, params, func(reply zenoh.Reply) {
-			if reply.IsOk() {
-				sample := reply.Ok().Unwrap()
-				replies = append(replies, sample.Payload().String())
-			} else {
-				err := reply.Err().Unwrap()
-				errors = append(errors, err.Payload().String())
-			}
-			wg.Done()
-		}, func() {}, &opts)
+		session2.Get(selector, params,
+			zenoh.Closure[zenoh.Reply]{Call: func(reply zenoh.Reply) {
+				if reply.IsOk() {
+					sample := reply.Ok().Unwrap()
+					replies = append(replies, sample.Payload().String())
+				} else {
+					err := reply.Err().Unwrap()
+					errors = append(errors, err.Payload().String())
+				}
+				wg.Done()
+			}}, &opts)
 	}
 
 	sendQuery("1", "ok")

@@ -99,7 +99,8 @@ func (opts *LivelinessSubscriberOptions) toCOpts(_ *runtime.Pinner) C.z_liveline
 }
 
 // Declares a subscriber on liveliness tokens that intersect `keyexpr`.
-func (liveliness *Liveliness) DeclareSubscriber(keyexpr KeyExpr, callback func(Sample), drop func(), options *LivelinessSubscriberOptions) (Subscriber, error) {
+func (liveliness *Liveliness) DeclareSubscriber(keyexpr KeyExpr, handler Handler[Sample], options *LivelinessSubscriberOptions) (Subscriber, error) {
+	callback, drop, channel := handler.ToCbDropHandler()
 	closure := newClosure(callback, drop)
 	var cClosure C.z_owned_closure_sample_t
 	C.z_closure_sample(&cClosure, (*[0]byte)(C.zenohSubscriberCallback), (*[0]byte)(C.zenohSubscriberDrop), unsafe.Pointer(closure))
@@ -116,7 +117,7 @@ func (liveliness *Liveliness) DeclareSubscriber(keyexpr KeyExpr, callback func(S
 	pinner.Unpin()
 
 	if res == 0 {
-		return Subscriber{subscriber: &cSubscriber}, nil
+		return Subscriber{subscriber: &cSubscriber, receiver: channel}, nil
 	}
 	return Subscriber{}, NewZError(res, "Failed to declare LivelinessSubscriber")
 }
@@ -134,7 +135,8 @@ func (opts *LivelinessGetOptions) toCOpts(_ *runtime.Pinner) C.z_liveliness_get_
 }
 
 // Query liveliness tokens currently on the network with a key expression intersecting with `keyexpr`.
-func (liveliness *Liveliness) Get(keyexpr KeyExpr, callback func(Reply), drop func(), options *LivelinessGetOptions) error {
+func (liveliness *Liveliness) Get(keyexpr KeyExpr, handler Handler[Reply], options *LivelinessGetOptions) (<-chan Reply, error) {
+	callback, drop, channel := handler.ToCbDropHandler()
 	closure := newClosure(callback, drop)
 	pinner := runtime.Pinner{}
 	cKeyexpr := keyexpr.toCData(&pinner)
@@ -148,7 +150,7 @@ func (liveliness *Liveliness) Get(keyexpr KeyExpr, callback func(Reply), drop fu
 	pinner.Unpin()
 
 	if res == 0 {
-		return nil
+		return channel, nil
 	}
-	return NewZError(res, "Failed to perform LivelinessGet operation")
+	return nil, NewZError(res, "Failed to perform LivelinessGet operation")
 }

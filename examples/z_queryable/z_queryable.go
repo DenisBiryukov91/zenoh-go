@@ -61,7 +61,7 @@ func main() {
 
 	opts := zenoh.QueryableOptions{}
 	opts.Complete = args.complete
-	queryable, err := session.DeclareQueryable(queryableKeyexpr, queryHandler, nil, &opts)
+	queryable, err := session.DeclareQueryable(queryableKeyexpr, zenoh.Closure[zenoh.Query]{Call: queryHandler}, &opts)
 	if err != nil {
 		fmt.Println("Unable to declare queryable.")
 		os.Exit(-1)

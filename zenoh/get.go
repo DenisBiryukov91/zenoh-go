@@ -127,8 +127,9 @@ func zenohGetDrop(context unsafe.Pointer) {
 }
 
 // Query data from the matching queryables in the system.
-// Replies are provided through a callback function.
-func (session *Session) Get(keyexpr KeyExpr, parameters string, callback func(Reply), drop func(), get_options *GetOptions) error {
+// Replies are provided through a callback function, if handler is [Closure], through returned receiver otherwise.
+func (session *Session) Get(keyexpr KeyExpr, parameters string, handler Handler[Reply], get_options *GetOptions) (<-chan Reply, error) {
+	callback, drop, channel := handler.ToCbDropHandler()
 	closure := newClosure(callback, drop)
 	pinner := runtime.Pinner{}
 	cKeyexpr := keyexpr.toCData(&pinner)
@@ -147,7 +148,7 @@ func (session *Session) Get(keyexpr KeyExpr, parameters string, callback func(Re
 	pinner.Unpin()
 
 	if res == 0 {
-		return nil
+		return channel, nil
 	}
-	return NewZError(res, "Failed to perform Get operation")
+	return nil, NewZError(res, "Failed to perform Get operation")
 }

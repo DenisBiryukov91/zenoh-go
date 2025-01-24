@@ -43,14 +43,10 @@ func main() {
 
 	fmt.Printf("Sending liveliness query '%s'...\n", args.keyexpr)
 
-	// Create FIFO channel
-	replies := make(chan zenoh.Reply, 16)
-
 	// send Query
-	session.Liveliness().Get(
+	replies, _ := session.Liveliness().Get(
 		keyExpr,
-		func(reply zenoh.Reply) { replies <- reply },
-		func() { close(replies) },
+		zenoh.NewFifoChannel[zenoh.Reply](16),
 		&zenoh.LivelinessGetOptions{TimeoutMs: args.timeout})
 
 	for reply := range replies {

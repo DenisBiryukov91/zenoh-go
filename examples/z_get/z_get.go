@@ -47,9 +47,6 @@ func main() {
 	// Create key expression
 	fmt.Printf("Sending Query '%s'...\n", args.selector)
 
-	// Create FIFO channel
-	replies := make(chan zenoh.Reply, 16)
-
 	// Set get options
 	opts := zenoh.GetOptions{}
 	if args.payload != "" {
@@ -59,11 +56,10 @@ func main() {
 	opts.Target = option.Some(args.queryTarget)
 
 	// send Query
-	session.Get(
+	replies, _ := session.Get(
 		keyExpr,
 		selectorParams,
-		func(reply zenoh.Reply) { replies <- reply },
-		func() { close(replies) },
+		zenoh.NewFifoChannel[zenoh.Reply](16),
 		&opts)
 
 	for reply := range replies {

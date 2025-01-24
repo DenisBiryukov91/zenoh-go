@@ -52,7 +52,7 @@ func main() {
 	}
 
 	fmt.Printf("Declaring liveliness subscriber on '%s'...\n", args.keyexpr)
-	sub, err := session.Liveliness().DeclareSubscriber(keyExpr, dataHandler, nil, &zenoh.LivelinessSubscriberOptions{History: args.history})
+	sub, err := session.Liveliness().DeclareSubscriber(keyExpr, zenoh.Closure[zenoh.Sample]{Call: dataHandler}, &zenoh.LivelinessSubscriberOptions{History: args.history})
 	if err != nil {
 		fmt.Println("Unable to declare liveliness subscriber.")
 		os.Exit(-1)
