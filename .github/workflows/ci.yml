@@ -2,48 +2,103 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: ["main"]
   pull_request:
     branches: ["**"]
   schedule:
     - cron: "0 6 * * 1-5"
 
 jobs:
-  build:
+  install-deps:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.22'
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
 
-    - name: Install zenoh-c dependencies
-      run: |
-        git clone https://github.com/eclipse-zenoh/zenoh-c.git
-        cd zenoh-c
-        mkdir build && cd build
-        cmake .. -DZENOHC_BUILD_WITH_UNSTABLE_API=ON -DCMAKE_INSTALL_PREFIX="$HOME/local"
-        cmake --build . --target install --config Release
+      - name: Build Zenoh-C dependencies
+        run: |
+          git clone https://github.com/eclipse-zenoh/zenoh-c.git
+          cd zenoh-c
+          mkdir build && cd build
+          cmake .. -DZENOHC_BUILD_WITH_UNSTABLE_API=ON -DCMAKE_INSTALL_PREFIX="/tmp/local"
+          cmake --build . --target install --config Release
 
-    - name: Install dependencies
-      run: make deps
+      - name: Save dependencies artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: zenoh-c-deps
+          path: /tmp/local
 
-    - name: Build all examples 
-      run: |
-        export CGO_CFLAGS="-I$HOME/local/include"
-        export CGO_LDFLAGS="-L$HOME/local/lib"
-        make
+  build:
+    name: Build examples
+    needs: install-deps
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Run tests
-      run: |
-        export CGO_CFLAGS="-I$HOME/local/include"
-        export CGO_LDFLAGS="-L$HOME/local/lib"
-        export LD_LIBRARY_PATH="$HOME/local/lib"
-        go test ./tests
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
 
-    - name: Check code format
-      run: make fmt
+      - name: Download dependencies artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: zenoh-c-deps
+          path: /tmp/local
+
+      - name: Install dependencies
+        run: make deps
+
+      - name: Build all examples
+        run: |
+          export CGO_CFLAGS="-I/tmp/local/include"
+          export CGO_LDFLAGS="-L/tmp/local/lib"
+          make
+
+  test:
+    name: Run tests
+    needs: install-deps
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
+
+      - name: Download dependencies artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: zenoh-c-deps
+          path: /tmp/local
+
+      - name: Run tests
+        run: |
+          export CGO_CFLAGS="-I/tmp/local/include"
+          export CGO_LDFLAGS="-L/tmp/local/lib"
+          export LD_LIBRARY_PATH="/tmp/local/lib"
+          go test ./tests
+
+  fmt:
+    name: Check code format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
+
+      - name: Check code format
+        run: make fmt
