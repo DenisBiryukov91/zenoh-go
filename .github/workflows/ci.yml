@@ -29,7 +29,7 @@ jobs:
           cmake --build . --target install --config Release
 
       - name: Save dependencies artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: zenoh-c-deps
           path: /tmp/local
@@ -48,7 +48,7 @@ jobs:
           go-version: '1.22'
 
       - name: Download dependencies artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: zenoh-c-deps
           path: /tmp/local
@@ -60,7 +60,14 @@ jobs:
         run: |
           export CGO_CFLAGS="-I/tmp/local/include"
           export CGO_LDFLAGS="-L/tmp/local/lib"
+          export BIN_DIR="/tmp/local/bin"
           make
+
+      - name: Save examples artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: examples-deps
+          path: /tmp/local
 
   test:
     name: Run tests
@@ -76,7 +83,7 @@ jobs:
           go-version: '1.22'
 
       - name: Download dependencies artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: zenoh-c-deps
           path: /tmp/local
@@ -86,7 +93,49 @@ jobs:
           export CGO_CFLAGS="-I/tmp/local/include"
           export CGO_LDFLAGS="-L/tmp/local/lib"
           export LD_LIBRARY_PATH="/tmp/local/lib"
-          go test ./tests
+          make test 
+
+  test_examples:
+    name: Run examples test 
+    needs: build 
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download dependencies artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: examples-deps
+          path: /tmp/local
+
+      - name: Run test_examples
+        run: |
+          export LD_LIBRARY_PATH="/tmp/local/lib"
+          export BIN_DIR="/tmp/local/bin"
+          chmod a+x ${BIN_DIR}/*
+          make test_examples
+
+  test_examples_quic:
+    name: Run examples test with QUIC transport
+    needs: build 
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download dependencies artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: examples-deps
+          path: /tmp/local
+
+      - name: Run test_examples_quic
+        run: |
+          export LD_LIBRARY_PATH="/tmp/local/lib"
+          export BIN_DIR="/tmp/local/bin"
+          chmod a+x ${BIN_DIR}/*
+          make test_examples_quic
 
   fmt:
     name: Check code format
