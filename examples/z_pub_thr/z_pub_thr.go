@@ -53,7 +53,7 @@ func main() {
 	for i := range data {
 		data[i] = byte(i % 10)
 	}
-	to_send := zenoh.NewZBytes(data)
+	toSend := zenoh.NewZBytes(data)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -64,7 +64,7 @@ func main() {
 		case <-stop:
 			return
 		default:
-			pub.Put(to_send, nil)
+			pub.Put(toSend, nil)
 		}
 	}
 }
