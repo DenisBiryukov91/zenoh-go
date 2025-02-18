@@ -48,7 +48,7 @@ func NewFifoChannel[T any](capacity int) FifoChannel[T] {
 	return FifoChannel[T]{channel: make(chan T, capacity)}
 }
 
-// A Ring channel. A [Handler] that exposes Zenoh message in a FIFO order. When full, the older unprocessed messages will be removed to leave the room for the new ones.
+// A Ring channel. A [Handler] that exposes Zenoh message in a FIFO order. When full, the older unprocessed messages will be removed to leave room for the new ones.
 type RingChannel[T any] struct {
 	channel chan T
 }

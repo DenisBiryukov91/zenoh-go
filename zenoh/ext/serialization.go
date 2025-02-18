@@ -44,38 +44,56 @@ type ZSerializer struct {
 	buffer []byte
 }
 
+// Serialize an int8 and append it to existing serialized payload.
+// Faster than generic [ZSerializer.Serialize].
 func (serializer *ZSerializer) SerializeInt8(value int8) {
 	serializer.buffer = append(serializer.buffer, uint8(value))
 }
 
+// Serialize a uint8 and append it to existing serialized payload.
+// Faster than generic [ZSerializer.Serialize].
 func (serializer *ZSerializer) SerializeUint8(value uint8) {
 	serializer.buffer = append(serializer.buffer, value)
 }
 
+// Serialize an int16 and append it to existing serialized payload.
+// Faster than generic [ZSerializer.Serialize].
 func (serializer *ZSerializer) SerializeInt16(value int16) {
 	serializer.buffer = binary.LittleEndian.AppendUint16(serializer.buffer, uint16(value))
 }
 
+// Serialize a uint16 and append it to existing serialized payload.
+// Faster than generic [ZSerializer.Serialize].
 func (serializer *ZSerializer) SerializeUint16(value uint16) {
 	serializer.buffer = binary.LittleEndian.AppendUint16(serializer.buffer, value)
 }
 
+// Serialize an int32 and append it to existing serialized payload.
+// Faster than generic [ZSerializer.Serialize].
 func (serializer *ZSerializer) SerializeInt32(value int32) {
 	serializer.buffer = binary.LittleEndian.AppendUint32(serializer.buffer, uint32(value))
 }
 
+// Serialize a uint32 and append it to existing serialized payload.
+// Faster than generic [ZSerializer.Serialize].
 func (serializer *ZSerializer) SerializeUint32(value uint32) {
 	serializer.buffer = binary.LittleEndian.AppendUint32(serializer.buffer, value)
 }
 
+// Serialize an int64 and append it to existing serialized payload.
+// Faster than generic [ZSerializer.Serialize].
 func (serializer *ZSerializer) SerializeInt64(value int64) {
 	serializer.buffer = binary.LittleEndian.AppendUint64(serializer.buffer, uint64(value))
 }
 
+// Serialize an uint64 and append it to existing serialized payload.
+// Faster than generic [ZSerializer.Serialize].
 func (serializer *ZSerializer) SerializeUint64(value uint64) {
 	serializer.buffer = binary.LittleEndian.AppendUint64(serializer.buffer, value)
 }
 
+// Serialize a bool and append it to existing serialized payload.
+// Faster than generic [ZSerializer.Serialize].
 func (serializer *ZSerializer) SerializeBool(value bool) {
 	if value {
 		serializer.SerializeUint8(1)
@@ -84,26 +102,35 @@ func (serializer *ZSerializer) SerializeBool(value bool) {
 	}
 }
 
+// Serialize a float32 and append it to existing serialized payload.
+// Faster than generic [ZSerializer.Serialize].
 func (serializer *ZSerializer) SerializeFloat32(value float32) {
 	serializer.SerializeUint32(math.Float32bits(value))
 }
 
+// Serialize a float64 and append it to existing serialized payload.
+// Faster than generic [ZSerializer.Serialize].
 func (serializer *ZSerializer) SerializeFloat64(value float64) {
 	serializer.SerializeUint64(math.Float64bits(value))
 }
 
 // Serialize length of the sequence. Can be used when defining serialization for custom containers.
+// Can be deserialized using [ZDeserializer.DeserializeSequenceLen].
 func (serializer *ZSerializer) SerializeSequenceLen(value int) {
 	buf := bytes.NewBuffer(serializer.buffer)
 	leb128.EncodeUnsigned(buf, uint64(value))
 	serializer.buffer = buf.Bytes()
 }
 
+// Serialize a []byte and append it to existing serialized payload.
+// Faster than generic [ZSerializer.Serialize].
 func (serializer *ZSerializer) SerializeBytes(value []byte) {
 	serializer.SerializeSequenceLen(len(value))
 	serializer.buffer = append(serializer.buffer, value...)
 }
 
+// Serialize string and append it to existing serialized payload.
+// Faster than generic [ZSerializer.Serialize].
 func (serializer *ZSerializer) SerializeString(value string) {
 	serializer.SerializeSequenceLen(len(value))
 	for i := 0; i < len(value); i++ {
@@ -142,7 +169,7 @@ func (serializer *ZSerializer) serializeMap(value reflect.Value) error {
 // Supported types are:
 //   - built-in primitive types: int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, float64, bool,
 //   - string,
-//   - types that implement ZSerializeable interface,
+//   - types that implement [ZSerializeable] interface,
 //   - arrays, maps and slices of supported types.
 //
 // A non-nil error will be returned, when passing an unsupported type.
@@ -196,7 +223,7 @@ func (serializer *ZSerializer) Finish() zenoh.ZBytes {
 	return zenoh.NewZBytes(buf)
 }
 
-// Construct serializer in an empty state
+// Construct serializer in an empty state.
 func NewZSerializer() ZSerializer {
 	return ZSerializer{}
 }
@@ -205,7 +232,7 @@ func NewZSerializer() ZSerializer {
 // Supported types are:
 //   - built-in primitive types: int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, float64, bool,
 //   - string,
-//   - types that implement ZSerializeable interface,
+//   - types that implement [ZSerializeable] interface,
 //   - arrays, maps and slices of supported types.
 //
 // A non-nil error will be returned, when passing an unsupported type.
@@ -232,15 +259,24 @@ func NewZDeserializer(zbytes zenoh.ZBytes) ZDeserializer {
 	return ZDeserializer{buf: *bytes.NewBuffer(zbytes.Bytes())}
 }
 
+// Deserialize next portion of data into an int8 and advance the reading position.
+// Faster than generic [ZDeserializer.Deserialize].
+// A non nil-error will be returned if there is not enough data for deserialization.
 func (deserializer *ZDeserializer) DeserializeInt8() (int8, error) {
 	res, err := deserializer.buf.ReadByte()
 	return int8(res), err
 }
 
+// Deserialize next portion of data into a uint8 and advance the reading position.
+// Faster than generic [ZDeserializer.Deserialize].
+// A non nil-error will be returned if there is not enough data for deserialization.
 func (deserializer *ZDeserializer) DeserializeUint8() (uint8, error) {
 	return deserializer.buf.ReadByte()
 }
 
+// Deserialize next portion of data into a bool and advance the reading position.
+// Faster than generic [ZDeserializer.Deserialize].
+// A non nil-error will be returned if there is not enough data for deserialization.
 func (deserializer *ZDeserializer) DeserializeBool() (bool, error) {
 	res, err := deserializer.buf.ReadByte()
 	if err == nil && res > 1 {
@@ -249,11 +285,17 @@ func (deserializer *ZDeserializer) DeserializeBool() (bool, error) {
 	return res == 1, err
 }
 
+// Deserialize next portion of data into an int16 and advance the reading position.
+// Faster than generic [ZDeserializer.Deserialize].
+// A non nil-error will be returned if there is not enough data for deserialization.
 func (deserializer *ZDeserializer) DeserializeInt16() (int16, error) {
 	res, err := deserializer.DeserializeUint16()
 	return int16(res), err
 }
 
+// Deserialize next portion of data into a uint16 and advance the reading position.
+// Faster than generic [ZDeserializer.Deserialize].
+// A non nil-error will be returned if there is not enough data for deserialization.
 func (deserializer *ZDeserializer) DeserializeUint16() (uint16, error) {
 	b := deserializer.buf.Next(uint16Size)
 	if len(b) != uint16Size {
@@ -262,11 +304,17 @@ func (deserializer *ZDeserializer) DeserializeUint16() (uint16, error) {
 	return binary.LittleEndian.Uint16(b), nil
 }
 
+// Deserialize next portion of data into an int32 and advance the reading position.
+// Faster than generic [ZDeserializer.Deserialize].
+// A non nil-error will be returned if there is not enough data for deserialization.
 func (deserializer *ZDeserializer) DeserializeInt32() (int32, error) {
 	res, err := deserializer.DeserializeUint32()
 	return int32(res), err
 }
 
+// Deserialize next portion of data into a uint8 and advance the reading position.
+// Faster than generic [ZDeserializer.Deserialize].
+// A non nil-error will be returned if there is not enough data for deserialization.
 func (deserializer *ZDeserializer) DeserializeUint32() (uint32, error) {
 	b := deserializer.buf.Next(uint32Size)
 	if len(b) != uint32Size {
@@ -275,11 +323,17 @@ func (deserializer *ZDeserializer) DeserializeUint32() (uint32, error) {
 	return binary.LittleEndian.Uint32(b), nil
 }
 
+// Deserialize next portion of data into an int64 and advance the reading position.
+// Faster than generic [ZDeserializer.Deserialize].
+// A non nil-error will be returned if there is not enough data for deserialization.
 func (deserializer *ZDeserializer) DeserializeInt64() (int64, error) {
 	res, err := deserializer.DeserializeUint64()
 	return int64(res), err
 }
 
+// Deserialize next portion of data into a uint64 and advance the reading position.
+// Faster than generic [ZDeserializer.Deserialize].
+// A non nil-error will be returned if there is not enough data for deserialization.
 func (deserializer *ZDeserializer) DeserializeUint64() (uint64, error) {
 	b := deserializer.buf.Next(uint64Size)
 	if len(b) != uint64Size {
@@ -288,17 +342,24 @@ func (deserializer *ZDeserializer) DeserializeUint64() (uint64, error) {
 	return binary.LittleEndian.Uint64(b), nil
 }
 
+// Deserialize next portion of data into a float32 and advance the reading position.
+// Faster than generic [ZDeserializer.Deserialize].
+// A non nil-error will be returned if there is not enough data for deserialization.
 func (deserializer *ZDeserializer) DeserializeFloat32() (float32, error) {
 	res, err := deserializer.DeserializeUint32()
 	return math.Float32frombits(res), err
 }
 
+// Deserialize next portion of data into a float64 and advance the reading position.
+// Faster than generic [ZDeserializer.Deserialize].
+// A non nil-error will be returned if there is not enough data for deserialization.
 func (deserializer *ZDeserializer) DeserializeFloat64() (float64, error) {
 	res, err := deserializer.DeserializeUint64()
 	return math.Float64frombits(res), err
 }
 
-// Read length of the sequence previously written by [ZSerializer.SerializeSequenceLen]
+// Read length of the sequence previously written by [ZSerializer.SerializeSequenceLen].
+// A non nil-error will be returned if there is not enough data for deserialization.
 func (deserializer *ZDeserializer) DeserializeSequenceLen() (len int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -312,6 +373,9 @@ func (deserializer *ZDeserializer) DeserializeSequenceLen() (len int, err error)
 	return int(res), err
 }
 
+// Deserialize next portion of data into []byte and advance the reading position.
+// Faster than generic [ZDeserializer.Deserialize].
+// A non nil-error will be returned if there is not enough data for deserialization.
 func (deserializer *ZDeserializer) DeserializeBytes() ([]byte, error) {
 	l, err := deserializer.DeserializeSequenceLen()
 	if err != nil {
@@ -324,9 +388,12 @@ func (deserializer *ZDeserializer) DeserializeBytes() ([]byte, error) {
 	return res, nil
 }
 
+// Deserialize next portion of data into a string and advance the reading position.
+// Faster than generic [ZDeserializer.Deserialize].
+// A non nil-error will be returned if there is not enough data for deserialization.
 func (deserializer *ZDeserializer) DeserializeString() (string, error) {
 	res, err := deserializer.DeserializeBytes()
-	// is utf8 check necessary here, given that go allows strings to contain non-valid utf8 byte sequences ?
+	// is utf-8 check necessary here, given that go allows strings to contain non-valid utf-8 byte sequences ?
 	return string(res), err
 }
 
@@ -395,11 +462,11 @@ func (deserializer *ZDeserializer) deserializeMap(value reflect.Value) error {
 // Supported types are:
 //   - built-in primitive types: int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, float64, bool,
 //   - string,
-//   - types that implement ZDeserializeable interface,
+//   - types that implement [ZDeserializeable] interface,
 //   - arrays, maps and slices of supported types.
 //
 // A non-nil error will be returned, when passing an unsupported type, or when deserialization fails.
-// out must be a non-nil pointer to the target type instance.
+// `out` must be a non-nil pointer to the target type instance.
 func (deserializer *ZDeserializer) Deserialize(out any) error {
 	switch v := out.(type) {
 	case *int8:
@@ -475,7 +542,7 @@ func (deserializer *ZDeserializer) Deserialize(out any) error {
 	}
 }
 
-// Return `true` if all bytes were used for deserialization, `false` otherwise.
+// Return “true“ if all bytes were used for deserialization, “false“ otherwise.
 func (deserializer *ZDeserializer) IsDone() bool {
 	return deserializer.buf.Len() == 0
 }
@@ -484,11 +551,11 @@ func (deserializer *ZDeserializer) IsDone() bool {
 // Supported types are:
 //   - built-in primitive types: int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, float64, bool,
 //   - string,
-//   - types that implement ZDeserializeable interface,
+//   - types that implement [ZDeserializeable] interface,
 //   - arrays, maps and slices of supported types.
 //
 // A non-nil error will be returned, when passing an unsupported type, when deserialization fails, or if
-// zbytes contains more bytes than required for deserialization.
+// `zbytes` contains more bytes than required for deserialization.
 func ZDeserialize[T any](zbytes zenoh.ZBytes) (T, error) {
 	var t T
 	deserializer := NewZDeserializer(zbytes)

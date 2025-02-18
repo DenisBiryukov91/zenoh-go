@@ -23,11 +23,14 @@ import (
 	"github.com/BooleanCat/option"
 )
 
+// A publisher that allows to send data.
+//
+// Publishers are automatically undeclared when dropped.
 type Publisher struct {
 	publisher *C.z_owned_publisher_t
 }
 
-// Options passed to Publisher Put operation.
+// Options passed to [Publisher.Put] operation.
 type PublisherPutOptions struct {
 	Encoding    option.Option[Encoding]  // The encoding of the publication.
 	Attachement option.Option[ZBytes]    // The attachment to attach to the publication.
@@ -54,7 +57,7 @@ func (opts *PublisherPutOptions) toCOpts(pinner *runtime.Pinner) (C.z_publisher_
 	return cOpts, encoding, attachment
 }
 
-// Options passed to Publisher Delete operation.
+// Options passed to [Publisher.Delete] operation.
 type PublisherDeleteOptions struct {
 	TimeStamp option.Option[TimeStamp] // The timestamp of the publication.
 }
@@ -176,7 +179,7 @@ func (session *Session) DeclarePublisher(keyexpr KeyExpr, options *PublisherOpti
 	return Publisher{}, NewZError(res, "Failed to declare Publisher")
 }
 
-// Options passed to Session Put operation.
+// Options passed to [Session.Put] operation.
 type PutOptions struct {
 	Encoding          option.Option[Encoding]          // The encoding of the publication.
 	Attachement       option.Option[ZBytes]            // The attachment to attach to the publication.
@@ -213,7 +216,7 @@ func (opts *PutOptions) toCOpts(pinner *runtime.Pinner) (C.z_put_options_t, *C.z
 	return cOpts, encoding, attachment
 }
 
-// Options passed to Session Delete operation.
+// Options passed to [Session.Delete] operation.
 type DeleteOptions struct {
 	TimeStamp         option.Option[TimeStamp]         // The timestamp of the delete message.
 	CongestionControl option.Option[CongestionControl] // The congestion control to apply when routing the delete message.

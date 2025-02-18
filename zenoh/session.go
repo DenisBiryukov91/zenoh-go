@@ -78,7 +78,7 @@ func Open(config Config, options *SessionOptions) (Session, error) {
 }
 
 // Close Zenoh session. This also calls drop functions for not yet dropped or undeclared Zenoh entites (subscribers, queriers, etc).
-// After this operation, all calls for network operations for entites declared on this session will return a error.
+// After this operation, all calls for network operations for entites declared on this session will return an error.
 func (session *Session) Close(options *SessionCloseOptions) error {
 	res := int8(0)
 	if options == nil {

@@ -60,7 +60,7 @@ func (queryable *Queryable) Drop() {
 	C.z_queryable_drop(C.z_queryable_move(queryable.queryable))
 }
 
-// Options passed to queryable declaration
+// Options passed to queryable declaration.
 type QueryableOptions struct {
 	Complete bool // The completeness of the Queryable
 }

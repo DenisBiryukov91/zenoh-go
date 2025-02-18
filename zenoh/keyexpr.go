@@ -61,7 +61,7 @@ func newKeyExprFromC(keyexpr C.zc_cgo_string_data_t) KeyExpr {
 }
 
 // Construct key expression from string.
-//   - `keyexpr` MUST be valid UTF8.
+//   - `keyexpr` MUST be valid utf-8.
 //   - `keyexpr` MUST follow the Key Expression specification, i.e.:
 //     1. MUST NOT contain `//`, MUST NOT start nor end with `/`, MUST NOT contain any of the characters `?#$`.
 //     2. any instance of `**` may only be lead or followed by `/`.
@@ -96,7 +96,7 @@ func (keyexpr KeyExpr) String() string {
 	return string(keyexpr.keyexpr)
 }
 
-// Return “true“ if the key expression intersect, i.e. there exists at least one key which is contained in both of the
+// Return “true“ if the key expressions intersect, i.e. there exists at least one key which is contained in both of the
 // sets defined by “left“ and “right“, “false“ otherwise.
 func (left KeyExpr) Intersects(right KeyExpr) bool {
 	pinner := runtime.Pinner{}

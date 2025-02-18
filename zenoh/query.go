@@ -80,7 +80,7 @@ func newQueryFromC(cQueryData C.zc_cgo_query_data_t) Query {
 	return q
 }
 
-// Options passed to Query Reply operation.
+// Options passed to [Query.Reply] operation.
 type QueryReplyOptions struct {
 	Encoding          option.Option[Encoding]          // The encoding of the reply payload.
 	Attachement       option.Option[ZBytes]            // The attachment to attach to this reply.
@@ -117,7 +117,7 @@ func (opts *QueryReplyOptions) toCOpts(pinner *runtime.Pinner) (C.z_query_reply_
 	return cOpts, encoding, attachment
 }
 
-// Options passed to Query ReplyDel operation.
+// Options passed to [Query.ReplyDel] operation.
 type QueryReplyDelOptions struct {
 	Attachement       option.Option[ZBytes]            // The attachment to attach to this reply.
 	TimeStamp         option.Option[TimeStamp]         // The timestamp of the reply.
@@ -148,7 +148,7 @@ func (opts *QueryReplyDelOptions) toCOpts(pinner *runtime.Pinner) (C.z_query_rep
 	return cOpts, attachment
 }
 
-// Options passed to Query Reply operation.
+// Options passed to [Query.ReplyErr] operation.
 type QueryReplyErrOptions struct {
 	Encoding option.Option[Encoding] // The encoding of the reply payload.
 }
@@ -209,7 +209,7 @@ func (query *Query) ReplyDel(keyexpr KeyExpr, options *QueryReplyDelOptions) err
 	return NewZError(res, "Failed to send reply del")
 }
 
-// Send a error reply to the query.
+// Send an error reply to the query.
 //
 // This function can be called multiple times to send multiple replies to a query. The reply
 // will be considered complete when Drop is called.

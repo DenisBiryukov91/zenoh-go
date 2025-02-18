@@ -70,7 +70,7 @@ const (
 	WhatDefault          What = C.CGO_DEFAULT_SCOUTING_WHAT // Use default scouting mask.
 )
 
-// A Zenoh hello message returned by a Zenoh entity to a scout message sent with [scout].
+// A Zenoh hello message returned by a Zenoh entity to a scout message sent with [Scout].
 type Hello struct {
 	whatAmI  WhatAmI
 	locators []string
@@ -110,6 +110,7 @@ func (hello Hello) String() string {
 	return fmt.Sprintf("Hello { pid: %s, whatami: %s, locators: %s}", hello.id, hello.whatAmI, hello.locators)
 }
 
+// Options passed to [Scout] operation.
 type ScoutOptions struct {
 	TimeoutMs uint64 // The maximum duration in ms the scouting can take. 0 corresponds to default scouting timeout value.
 	What      What   // Type of entities to scout for. 0 corresponds to default scouting entities type.

@@ -10,7 +10,8 @@ Before building and running the examples, you need to have the following depende
 
 ### Installing Zenoh-C
 
-You can follow the instructions provided in the [Zenoh-C repository](https://github.com/eclipse-zenoh/zenoh-c) to install Zenoh-C.
+You can follow the instructions provided in the [Zenoh-C repository](https://github.com/eclipse-zenoh/zenoh-c) to install zenoh-c.
+It is required that zenoh-c is built with unstable features support (i.e. with -DZENOHC_BUILD_WITH_UNSTABLE_API=ON cmake flag).
 
 ## Building the Examples
 
@@ -37,6 +38,7 @@ make z_pub
 ## Running the Examples
 
 After building the examples, you can run them from the `bin` directory.
+Description of each example can be found [here](./examples/README.md).
 
 ### Run a Specific Example
 

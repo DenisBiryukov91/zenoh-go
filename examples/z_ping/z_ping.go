@@ -90,13 +90,15 @@ type Args struct {
 }
 
 func parseArgs() Args {
+	pflag.Usage = printUsage
+
 	var samples uint32
 	var warmup float32
 	var noExpress bool
 
 	pflag.Uint32VarP(&samples, "samples", "n", defaultSamples, "The number of pings to be attempted.")
 	pflag.Float32VarP(&warmup, "warmup", "w", defaultWarmup, "The warmup time in seconds during which pings will be emitted but not measured.")
-	pflag.BoolVar(&noExpress, "express", false, "Disable message batching.")
+	pflag.BoolVar(&noExpress, "no-express", false, "Disable message batching.")
 	var args Args
 	args.config = utils.ParseConfig()
 	args.samples = samples
@@ -105,7 +107,7 @@ func parseArgs() Args {
 
 	positional := pflag.Args()
 	if len(positional) != 1 {
-		fmt.Println("<PAYLOAD_SIZE> positional argument is required")
+		printUsage()
 		os.Exit(-1)
 	}
 	var err error
@@ -116,4 +118,9 @@ func parseArgs() Args {
 	}
 
 	return args
+}
+
+func printUsage() {
+	fmt.Printf("Usage: %s [OPTIONS] <PAYLOAD_SIZE>\nOptions:\n", os.Args[0])
+	pflag.PrintDefaults()
 }

@@ -66,8 +66,8 @@ func (sample *replyOk) IsOk() bool {
 // A Zenoh reply from a queryable.
 type Reply interface {
 	Ok() option.Option[Sample]      // Yield the contents of the reply by asserting it indicates a success.
-	Err() option.Option[ReplyError] // Yield the contents of the reply by asserting it indicates a error.
-	IsOk() bool                     // Return ``true`` if reply contains a valid response, ``false`` otherwise (in this case it contains a error value).
+	Err() option.Option[ReplyError] // Yield the contents of the reply by asserting it indicates an error.
+	IsOk() bool                     // Return ``true`` if reply contains a valid response, ``false`` otherwise (in this case it contains an error value).
 }
 
 func newReplyFromC(cReplyData C.zc_cgo_reply_data_t) Reply {

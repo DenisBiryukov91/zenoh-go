@@ -26,7 +26,7 @@ import (
 	"github.com/BooleanCat/option"
 )
 
-// The Queryables that should be target of a get
+// The Queryables that should be target of a get.
 type QueryTarget int
 
 const (
@@ -36,7 +36,7 @@ const (
 	QueryTargetDefault      QueryTarget = C.CGO_Z_QUERY_TARGET_DEFAULT
 )
 
-// The Query consolidation mode
+// The Query consolidation mode.
 type ConsolidationMode int
 
 const (
@@ -63,7 +63,7 @@ type QueryConsolidation struct {
 	mode ConsolidationMode
 }
 
-// Construct QueryConsolidation from ConsolidationMode
+// Construct QueryConsolidation from [ConsolidationMode].
 func NewQueryConsolidataion(mode ConsolidationMode) QueryConsolidation {
 	return QueryConsolidation{mode: mode}
 }
@@ -127,7 +127,7 @@ func zenohGetDrop(context unsafe.Pointer) {
 }
 
 // Query data from the matching queryables in the system.
-// Replies are provided through a callback function, if handler is [Closure], through returned receiver otherwise.
+// Replies are provided through a callback function, if handler is a [Closure], through returned receiver if it is a [RingChannel] or a [FifoChannel].
 func (session *Session) Get(keyexpr KeyExpr, parameters string, handler Handler[Reply], get_options *GetOptions) (<-chan Reply, error) {
 	callback, drop, channel := handler.ToCbDropHandler()
 	closure := newClosure(callback, drop)

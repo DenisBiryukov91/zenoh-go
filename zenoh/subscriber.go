@@ -62,6 +62,7 @@ func (subscriber *Subscriber) Drop() {
 	C.z_subscriber_drop(C.z_subscriber_move(subscriber.subscriber))
 }
 
+// Get the key expression of the subscriber.
 func (subscriber *Subscriber) KeyExpr() KeyExpr {
 	return newKeyExprFromC(C.zc_cgo_keyexpr_get_data(C.z_subscriber_keyexpr(C.z_subscriber_loan(subscriber.subscriber))))
 }
@@ -77,7 +78,7 @@ func (opts *SubscriberOptions) toCOpts(_ *runtime.Pinner) C.z_subscriber_options
 }
 
 // Construct a subscriber for the given key expression.
-// Queryable MUST be explicitly destroyed using [Subscriber.Undeclare] or [Subscriber.Drop] once it is no longer needed.
+// Subscriber MUST be explicitly destroyed using [Subscriber.Undeclare] or [Subscriber.Drop] once it is no longer needed.
 func (session *Session) DeclareSubscriber(keyexpr KeyExpr, handler Handler[Sample], options *SubscriberOptions) (Subscriber, error) {
 	callback, drop, recv := handler.ToCbDropHandler()
 	closure := newClosure(callback, drop)

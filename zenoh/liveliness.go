@@ -22,16 +22,17 @@ import (
 	"unsafe"
 )
 
+// [Session] liveliness functionality interface.
 type Liveliness struct {
 	session *Session
 }
 
-// Get access to Liveliness functionality
+// Get access to Liveliness functionality.
 func (session *Session) Liveliness() *Liveliness {
 	return &Liveliness{session: session}
 }
 
-// Options to pass to Liveliness.DeclareToken operation.
+// Options to pass to [Liveliness.DeclareToken] operation.
 type LivelinessTokenOptions struct {
 }
 
@@ -86,7 +87,7 @@ func (liveliness *Liveliness) DeclareToken(keyexpr KeyExpr, options *LivelinessT
 	return LivelinessToken{}, NewZError(res, "Failed to declare LivelinessToken")
 }
 
-// Options to pass to Liveliness.DeclareSubscriber operation.
+// Options to pass to [Liveliness.DeclareSubscriber] operation.
 type LivelinessSubscriberOptions struct {
 	History bool // If ``true``, subscriber will receive the state change notifications for liveliness tokens that were declared before its declaration.
 }
@@ -122,7 +123,7 @@ func (liveliness *Liveliness) DeclareSubscriber(keyexpr KeyExpr, handler Handler
 	return Subscriber{}, NewZError(res, "Failed to declare LivelinessSubscriber")
 }
 
-// Options to pass to Liveliness.Get operation.
+// Options to pass to [Liveliness.Get] operation.
 type LivelinessGetOptions struct {
 	TimeoutMs uint64 // The timeout for the liveliness query in milliseconds. 0 means default query timeout from zenoh configuration.
 }

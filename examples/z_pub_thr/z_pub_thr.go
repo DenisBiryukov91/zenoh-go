@@ -81,6 +81,8 @@ type Args struct {
 }
 
 func parseArgs() Args {
+	pflag.Usage = printUsage
+
 	var priorityValue uint8
 	var isExpress bool
 
@@ -99,7 +101,7 @@ func parseArgs() Args {
 	args.priority = priority
 	positional := pflag.Args()
 	if len(positional) != 1 {
-		fmt.Println("<PAYLOAD_SIZE> positional argument is required")
+		printUsage()
 		os.Exit(-1)
 	}
 	args.size, err = strconv.ParseUint(positional[0], 0, 0)
@@ -109,4 +111,9 @@ func parseArgs() Args {
 	}
 
 	return args
+}
+
+func printUsage() {
+	fmt.Printf("Usage: %s [OPTIONS] <PAYLOAD_SIZE>\nOptions:\n", os.Args[0])
+	pflag.PrintDefaults()
 }
