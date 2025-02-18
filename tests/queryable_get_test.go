@@ -117,3 +117,89 @@ func TestQueryableGet(t *testing.T) {
 		t.Errorf("Unexpected errors: %+v", errors)
 	}
 }
+
+func TestQueryableQuerier(t *testing.T) {
+	ke, _ := zenoh.NewKeyExpr("zenoh/querier_test/*")
+	query_ke, _ := zenoh.NewKeyExpr("zenoh/querier_test/1")
+	var queries []QueryData
+	var replies []string
+	var errors []string
+
+	session1, _ := zenoh.Open(zenoh.NewConfigDefault(), nil)
+	defer session1.Drop()
+	session2, _ := zenoh.Open(zenoh.NewConfigDefault(), nil)
+	defer session2.Drop()
+
+	var wg sync.WaitGroup
+	wg.Add(3)
+
+	queryHandler := func(q zenoh.Query) {
+		defer q.Drop()
+		payload := q.Payload().Unwrap().String()
+		qd := QueryData{
+			key:     q.KeyExpr().String(),
+			params:  q.Parameters(),
+			payload: payload,
+		}
+		queries = append(queries, qd)
+
+		if q.Parameters() == "ok" {
+			q.Reply(q.KeyExpr(), zenoh.NewZBytesFromString(payload), nil)
+		} else {
+			q.ReplyErr(zenoh.NewZBytesFromString("err"), nil)
+		}
+	}
+
+	queryable, _ := session1.DeclareQueryable(ke, zenoh.Closure[zenoh.Query]{Call: queryHandler}, nil)
+	defer queryable.Drop()
+
+	time.Sleep(1 * time.Second)
+
+	querier, _ := session2.DeclareQuerier(query_ke, &zenoh.QuerierOptions{TimeoutMs: 1000})
+	defer queryable.Drop()
+
+	sendQuery := func(payload, params string) {
+		opts := zenoh.QuerierGetOptions{
+			Payload: option.Some(zenoh.NewZBytesFromString(payload)),
+		}
+		querier.Get(params,
+			zenoh.Closure[zenoh.Reply]{Call: func(reply zenoh.Reply) {
+				if reply.IsOk() {
+					sample := reply.Ok().Unwrap()
+					replies = append(replies, sample.Payload().String())
+				} else {
+					err := reply.Err().Unwrap()
+					errors = append(errors, err.Payload().String())
+				}
+				wg.Done()
+			}}, &opts)
+	}
+
+	sendQuery("1", "ok")
+	sendQuery("2", "ok")
+	sendQuery("3", "err")
+
+	wg.Wait()
+
+	if len(queries) != 3 {
+		t.Fatalf("Expected 3 queries, got %d", len(queries))
+	}
+	expectedQueries := []QueryData{
+		{"zenoh/querier_test/1", "ok", "1"},
+		{"zenoh/querier_test/1", "ok", "2"},
+		{"zenoh/querier_test/1", "err", "3"},
+	}
+	for i, qd := range expectedQueries {
+		if !queries[i].Equals(qd) {
+			t.Errorf("Query %d does not match expected. Got %+v, expected %+v", i, queries[i], qd)
+		}
+	}
+
+	if len(replies) != 2 || replies[0] != "1" || replies[1] != "2" {
+		t.Errorf("Unexpected replies: %+v", replies)
+	}
+
+	if len(errors) != 1 || errors[0] != "err" {
+		t.Errorf("Unexpected errors: %+v", errors)
+	}
+}

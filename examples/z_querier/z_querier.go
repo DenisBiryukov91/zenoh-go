@@ -17,6 +17,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
+	"time"
 	"zenoh-go/examples/utils"
 	"zenoh-go/zenoh"
 
@@ -44,31 +46,57 @@ func main() {
 		os.Exit(-1)
 	}
 
-	fmt.Printf("Sending Query '%s'...\n", args.selector)
-
-	// Set get options
-	opts := zenoh.GetOptions{}
-	if args.payload != "" {
-		opts.Payload = option.Some(zenoh.NewZBytesFromString(args.payload))
-	}
-	opts.TimeoutMs = args.timeout
-	opts.Target = option.Some(args.queryTarget)
-
-	// send Query
-	replies, _ := session.Get(
+	fmt.Printf("Declaring Querier on '%s'...\n", keyExpr)
+	querier, err := session.DeclareQuerier(
 		keyExpr,
-		selectorParams,
-		zenoh.NewFifoChannel[zenoh.Reply](16),
-		&opts)
+		&zenoh.QuerierOptions{Target: option.Some(args.queryTarget), TimeoutMs: args.timeout})
 
-	for reply := range replies {
-		if reply.IsOk() {
-			sample := reply.Ok().Unwrap()
-			fmt.Printf(">> Received ('%s': '%s')\n",
-				sample.KeyExpr(),
-				sample.Payload())
-		} else {
-			fmt.Println("Received an error")
+	if err != nil {
+		fmt.Println("Unable to declare Querier for key expression!")
+		os.Exit(-1)
+	}
+	defer querier.Drop()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	fmt.Println("Press CTRL-C to quit...")
+
+	idx := 0
+	for {
+		select {
+		case <-stop:
+			return
+		default:
+			time.Sleep(time.Second)
+			payload := fmt.Sprintf("[%4d] %s", idx, args.payload)
+
+			fmt.Printf("Querying '%s' with payload '%s'...\n", args.selector, payload)
+
+			getOpts := zenoh.QuerierGetOptions{}
+			getOpts.Payload = option.Some(zenoh.NewZBytesFromString(payload))
+
+			// send Query
+			replies, err := querier.Get(
+				selectorParams,
+				zenoh.NewFifoChannel[zenoh.Reply](16),
+				&getOpts)
+
+			if err != nil {
+				fmt.Printf("Failed to send query: %v\n", err)
+			}
+
+			for reply := range replies {
+				if reply.IsOk() {
+					sample := reply.Ok().Unwrap()
+					fmt.Printf(">> Received ('%s': '%s')\n",
+						sample.KeyExpr(),
+						sample.Payload())
+				} else {
+					fmt.Println("Received an error")
+				}
+			}
+
+			idx++
 		}
 	}
 }

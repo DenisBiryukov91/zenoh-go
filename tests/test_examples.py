@@ -56,7 +56,8 @@ def terminate_processes(process_list):
 def wait_messages(client_output, messages):
     start_time = time.time()
     while time.time() - start_time < WAIT_MESSAGE_TIMEOUT_S:
-        if any(message in line for line in client_output for message in messages):
+        
+        if all(any((message in line) for line in client_output) for message in messages):
             return True
         time.sleep(1)
     return False
@@ -159,6 +160,19 @@ def main():
         ["Declaring liveliness token 'group1/**'"],
         build_client_cmd("z_get_liveliness"),
         ["Alive token ('group1/**')"],
+    )
+
+    test_examples(
+        build_peer_cmd("z_queryable"),
+        [
+            "Received Query 'demo/example/**?' with value '[   1] '",
+            "Responding ('demo/example/zenoh-go-queryable': 'Queryable from Go!')"
+        ],
+        build_client_cmd("z_querier"),
+        [
+            "Querying 'demo/example/**' with payload '[   1] '...",
+            "Received ('demo/example/zenoh-go-queryable': 'Queryable from Go!')"
+        ]
     )
 
 

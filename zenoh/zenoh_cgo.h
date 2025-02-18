@@ -126,4 +126,9 @@ z_result_t zc_cgo_liveliness_get(z_owned_session_t *session,
                                  zc_cgo_string_data_t keyexpr_data,
                                  void *context,
                                  z_liveliness_get_options_t *opts);
+z_result_t zc_cgo_querier_get(z_owned_querier_t *querier, const char *params,
+                              void *context, z_querier_get_options_t *opts,
+                              zc_cgo_bytes_data_t *payload_data,
+                              zc_internal_encoding_data_t *encoding_data,
+                              zc_cgo_bytes_data_t *attachment_data);
 #endif
