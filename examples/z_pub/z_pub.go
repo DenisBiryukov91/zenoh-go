@@ -26,6 +26,14 @@ import (
 	"github.com/spf13/pflag"
 )
 
+func matchingStatusCallback(status zenoh.MatchingStatus) {
+	if status.Matching {
+		fmt.Println("Publisher has matching subscribers.")
+	} else {
+		fmt.Println("Publisher has NO MORE matching subscribers.")
+	}
+}
+
 func main() {
 	zenoh.InitLoggerFromEnvOr("error")
 	args := parseArgs()
@@ -56,6 +64,10 @@ func main() {
 	signal.Notify(stop, os.Interrupt)
 	fmt.Println("Press CTRL-C to quit...")
 
+	if args.addMatchingListener {
+		pub.DeclareBackgroundMatchingListener(zenoh.Closure[zenoh.MatchingStatus]{Call: matchingStatusCallback})
+	}
+
 	idx := 0
 	for {
 		select {
@@ -85,20 +97,28 @@ const (
 )
 
 type Args struct {
-	keyexpr    string
-	payload    string
-	attachment string
-	config     zenoh.Config
+	keyexpr             string
+	payload             string
+	attachment          string
+	addMatchingListener bool
+	config              zenoh.Config
 }
 
 func parseArgs() Args {
 	var keyexpr string
 	var payload string
 	var attachment string
+	var addMatchingListener bool
 
 	pflag.StringVarP(&keyexpr, "key", "k", defaultKeyexpr, "The key expression to publish to.")
 	pflag.StringVarP(&payload, "payload", "p", defaultValue, "The value to publish.")
 	pflag.StringVarP(&attachment, "attach", "a", defaultAttachment, "The attachment to add to each put.")
+	pflag.BoolVar(&addMatchingListener, "add-matching-listener", false, "Add matching listener.")
 
-	return Args{keyexpr: keyexpr, payload: payload, attachment: attachment, config: utils.ParseConfig()}
+	return Args{
+		keyexpr:             keyexpr,
+		payload:             payload,
+		attachment:          attachment,
+		addMatchingListener: addMatchingListener,
+		config:              utils.ParseConfig()}
 }

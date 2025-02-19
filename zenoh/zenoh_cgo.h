@@ -87,6 +87,11 @@ extern void zenohGetCallbackData(zc_cgo_reply_data_t query, void *context);
 extern void zenohGetDrop(void *context);
 void zenohGetCallback(struct z_loaned_reply_t *reply, void *context);
 
+extern void zenohMatchingListenerDrop(void *context);
+typedef const struct z_matching_status_t zc_cgo_const_matching_status;
+extern void zenohMatchingListenerCallback(zc_cgo_const_matching_status *status,
+                                          void *context);
+
 z_result_t zc_cgo_publisher_put(z_owned_publisher_t *publisher,
                                 zc_cgo_bytes_data_t payload_data,
                                 z_publisher_put_options_t *opts,

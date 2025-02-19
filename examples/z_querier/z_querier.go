@@ -26,6 +26,14 @@ import (
 	"github.com/spf13/pflag"
 )
 
+func matchingStatusCallback(status zenoh.MatchingStatus) {
+	if status.Matching {
+		fmt.Println("Querier has matching queryables.")
+	} else {
+		fmt.Println("Queerier has NO MORE matching queryables.")
+	}
+}
+
 func main() {
 	zenoh.InitLoggerFromEnvOr("error")
 	args := parseArgs()
@@ -56,6 +64,10 @@ func main() {
 		os.Exit(-1)
 	}
 	defer querier.Drop()
+
+	if args.addMatchingListener {
+		querier.DeclareBackgroundMatchingListener(zenoh.Closure[zenoh.MatchingStatus]{Call: matchingStatusCallback})
+	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -102,11 +114,12 @@ func main() {
 }
 
 type Args struct {
-	selector    string
-	payload     string
-	timeout     uint64
-	queryTarget zenoh.QueryTarget
-	config      zenoh.Config
+	selector            string
+	payload             string
+	timeout             uint64
+	queryTarget         zenoh.QueryTarget
+	addMatchingListener bool
+	config              zenoh.Config
 }
 
 const (
@@ -120,11 +133,13 @@ func parseArgs() Args {
 	var payload string
 	var timeout uint64
 	var queryTargetString string
+	var addMatchingListener bool
 
 	pflag.StringVarP(&selector, "selector", "s", defaultSelector, "The selection of resources to query.")
 	pflag.StringVarP(&payload, "payload", "p", defaultValue, "An optional value to put in the query.")
 	pflag.StringVarP(&queryTargetString, "target", "t", "BEST_MATCHING", "Query target (BEST_MATCHING | ALL | ALL_COMPLETE).")
 	pflag.Uint64VarP(&timeout, "timeout", "o", 10000, "Query timeout in milliseconds.")
+	pflag.BoolVar(&addMatchingListener, "add-matching-listener", false, "Add matching listener.")
 
 	config := utils.ParseConfig()
 	queryTarget, err := utils.ParseQueryTarget(queryTargetString)
@@ -132,5 +147,11 @@ func parseArgs() Args {
 		fmt.Println(err.Error())
 		os.Exit(-1)
 	}
-	return Args{selector: selector, payload: payload, queryTarget: queryTarget, timeout: timeout, config: config}
+	return Args{
+		selector:            selector,
+		payload:             payload,
+		queryTarget:         queryTarget,
+		timeout:             timeout,
+		addMatchingListener: addMatchingListener,
+		config:              config}
 }
