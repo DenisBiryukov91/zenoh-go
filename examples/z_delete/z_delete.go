@@ -42,14 +42,6 @@ func main() {
 		os.Exit(-1)
 	}
 
-	fmt.Printf("Declaring Publisher on '%s'...\n", keyexpr)
-	pub, err := session.DeclarePublisher(keyexpr, nil)
-	if err != nil {
-		fmt.Println("Unable to declare Publisher for key expression!")
-		os.Exit(-1)
-	}
-	defer pub.Drop()
-
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
