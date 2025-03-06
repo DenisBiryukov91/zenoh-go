@@ -9,7 +9,7 @@ on:
     - cron: "0 6 * * 1-5"
 
 jobs:
-  install-deps:
+  cache-deps:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -21,22 +21,13 @@ jobs:
           go-version: '1.22'
 
       - name: Build Zenoh-C dependencies
-        run: |
-          git clone https://github.com/eclipse-zenoh/zenoh-c.git
-          cd zenoh-c
-          mkdir build && cd build
-          cmake .. -DZENOHC_BUILD_WITH_UNSTABLE_API=ON -DCMAKE_INSTALL_PREFIX="/tmp/local"
-          cmake --build . --target install --config Release
-
-      - name: Save dependencies artifact
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/build-zenoh-c
         with:
-          name: zenoh-c-deps
-          path: /tmp/local
+          install-prefix: "/tmp/local"
 
   build:
     name: Build examples
-    needs: install-deps
+    needs: cache-deps
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -47,11 +38,10 @@ jobs:
         with:
           go-version: '1.22'
 
-      - name: Download dependencies artifact
-        uses: actions/download-artifact@v4
+      - name: Build Zenoh-C dependencies
+        uses: ./.github/actions/build-zenoh-c
         with:
-          name: zenoh-c-deps
-          path: /tmp/local
+          install-prefix: "/tmp/local"
 
       - name: Install dependencies
         run: make deps
@@ -63,15 +53,9 @@ jobs:
           export BIN_DIR="/tmp/local/bin"
           make
 
-      - name: Save examples artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: examples-deps
-          path: /tmp/local
-
   test:
     name: Run tests
-    needs: install-deps
+    needs: cache-deps
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -82,11 +66,10 @@ jobs:
         with:
           go-version: '1.22'
 
-      - name: Download dependencies artifact
-        uses: actions/download-artifact@v4
+      - name: Build Zenoh-C dependencies
+        uses: ./.github/actions/build-zenoh-c
         with:
-          name: zenoh-c-deps
-          path: /tmp/local
+          install-prefix: "/tmp/local"
 
       - name: Run tests
         run: |
@@ -103,11 +86,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Download dependencies artifact
-        uses: actions/download-artifact@v4
+      - name: Build Zenoh-C dependencies
+        uses: ./.github/actions/build-zenoh-c
         with:
-          name: examples-deps
-          path: /tmp/local
+          install-prefix: "/tmp/local"
 
       - name: Run test_examples
         run: |
@@ -124,11 +106,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Download dependencies artifact
-        uses: actions/download-artifact@v4
+      - name: Build Zenoh-C dependencies
+        uses: ./.github/actions/build-zenoh-c
         with:
-          name: examples-deps
-          path: /tmp/local
+          install-prefix: "/tmp/local"
 
       - name: Run test_examples_quic
         run: |

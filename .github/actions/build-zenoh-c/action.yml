@@ -1,0 +1,32 @@
+name: build-zenoh-c
+
+inputs:
+  install-prefix:
+    description: 'Cmake install prefix'
+    required: true
+    
+runs:
+  using: 'composite'
+  steps:
+    - name: Clone Zenoh-C repository
+      id: clone-zenoh-c
+      shell: bash
+      run: |
+          git clone https://github.com/eclipse-zenoh/zenoh-c.git
+          cd zenoh-c
+          echo "rev=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+    - name: Cache Zenoh-C dependencies
+      id: cache-zenoh-c
+      uses: actions/cache@v4
+      with:
+        path: ${{ inputs.install-prefix }}
+        key: ${{ runner.os }}-${{ runner.arch }}-${{steps.clone-zenoh-c.outputs.rev}}-zenoh-c
+    - name: Build Zenoh-C
+      if: steps.cache-zenoh-c.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        cd zenoh-c
+        mkdir build && cd build
+        cmake .. -DZENOHC_BUILD_WITH_UNSTABLE_API=ON -DCMAKE_INSTALL_PREFIX="=${{ inputs.install-prefix }}"
+        cmake --build . --target install --config Release
