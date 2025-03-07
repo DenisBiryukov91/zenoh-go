@@ -131,10 +131,12 @@ func (publisher *Publisher) KeyExpr() KeyExpr {
 
 // Options passed to publisher declaration.
 type PublisherOptions struct {
-	Encoding          option.Option[Encoding]          // Default encoding for messages put by this publisher.
-	CongestionControl option.Option[CongestionControl] // The congestion control to apply when routing messages from this publisher.
-	Priority          option.Option[Priority]          // The priority of messages from this publisher.
-	IsExpress         bool                             // If set to ``true``, the messages of this publisher will not be batched. This usually has a positive impact on latency but negative impact on throughput.
+	Encoding           option.Option[Encoding]          // Default encoding for messages put by this publisher.
+	CongestionControl  option.Option[CongestionControl] // The congestion control to apply when routing messages from this publisher.
+	Priority           option.Option[Priority]          // The priority of messages from this publisher.
+	IsExpress          bool                             // If set to ``true``, the messages of this publisher will not be batched. This usually has a positive impact on latency but negative impact on throughput.
+	Reliability        option.Option[Reliability]       // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The publisher reliability.
+	AllowedDestination option.Option[Locality]          // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.  The allowed destination for this publisher.
 }
 
 func (opts *PublisherOptions) toCOpts(pinner *runtime.Pinner) C.z_publisher_options_t {
@@ -150,6 +152,12 @@ func (opts *PublisherOptions) toCOpts(pinner *runtime.Pinner) C.z_publisher_opti
 	}
 	if opts.CongestionControl.IsSome() {
 		cOpts.congestion_control = uint32(opts.CongestionControl.Unwrap())
+	}
+	if opts.Reliability.IsSome() {
+		cOpts.reliability = uint32(opts.Reliability.Unwrap())
+	}
+	if opts.AllowedDestination.IsSome() {
+		cOpts.allowed_destination = uint32(opts.AllowedDestination.Unwrap())
 	}
 	cOpts.is_express = C.bool(opts.IsExpress)
 	return cOpts
@@ -181,12 +189,14 @@ func (session *Session) DeclarePublisher(keyexpr KeyExpr, options *PublisherOpti
 
 // Options passed to [Session.Put] operation.
 type PutOptions struct {
-	Encoding          option.Option[Encoding]          // The encoding of the publication.
-	Attachement       option.Option[ZBytes]            // The attachment to attach to the publication.
-	TimeStamp         option.Option[TimeStamp]         // The timestamp of the publication.
-	CongestionControl option.Option[CongestionControl] // The congestion control to apply when routing the publication.
-	Priority          option.Option[Priority]          // The priority of the publication.
-	IsExpress         bool                             // If set to ``true``, the message will not be batched. This usually has a positive impact on latency but negative impact on throughput.
+	Encoding           option.Option[Encoding]          // The encoding of the publication.
+	Attachement        option.Option[ZBytes]            // The attachment to attach to the publication.
+	TimeStamp          option.Option[TimeStamp]         // The timestamp of the publication.
+	CongestionControl  option.Option[CongestionControl] // The congestion control to apply when routing the publication.
+	Priority           option.Option[Priority]          // The priority of the publication.
+	IsExpress          bool                             // If set to ``true``, the message will not be batched. This usually has a positive impact on latency but negative impact on throughput.
+	Reliability        option.Option[Reliability]       // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The put operation reliability.
+	AllowedDestination option.Option[Locality]          // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.  The allowed destination for this put message.
 }
 
 func (opts *PutOptions) toCOpts(pinner *runtime.Pinner) (C.z_put_options_t, *C.zc_internal_encoding_data_t, *C.zc_cgo_bytes_data_t) {
@@ -212,16 +222,24 @@ func (opts *PutOptions) toCOpts(pinner *runtime.Pinner) (C.z_put_options_t, *C.z
 	if opts.CongestionControl.IsSome() {
 		cOpts.congestion_control = uint32(opts.CongestionControl.Unwrap())
 	}
+	if opts.Reliability.IsSome() {
+		cOpts.reliability = uint32(opts.Reliability.Unwrap())
+	}
+	if opts.AllowedDestination.IsSome() {
+		cOpts.allowed_destination = uint32(opts.AllowedDestination.Unwrap())
+	}
 	cOpts.is_express = C.bool(opts.IsExpress)
 	return cOpts, encoding, attachment
 }
 
 // Options passed to [Session.Delete] operation.
 type DeleteOptions struct {
-	TimeStamp         option.Option[TimeStamp]         // The timestamp of the delete message.
-	CongestionControl option.Option[CongestionControl] // The congestion control to apply when routing the delete message.
-	Priority          option.Option[Priority]          // The priority of the delete message.
-	IsExpress         bool                             // If set to ``true``, the delete message will not be batched. This usually has a positive impact on latency but negative impact on throughput.
+	TimeStamp          option.Option[TimeStamp]         // The timestamp of the delete message.
+	CongestionControl  option.Option[CongestionControl] // The congestion control to apply when routing the delete message.
+	Priority           option.Option[Priority]          // The priority of the delete message.
+	IsExpress          bool                             // If set to ``true``, the delete message will not be batched. This usually has a positive impact on latency but negative impact on throughput.
+	Reliability        option.Option[Reliability]       // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The delete operation reliability.
+	AllowedDestination option.Option[Locality]          // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.  The allowed destination for this delete message.
 }
 
 func (opts *DeleteOptions) toCOpts(_ *runtime.Pinner) C.z_delete_options_t {
@@ -236,6 +254,12 @@ func (opts *DeleteOptions) toCOpts(_ *runtime.Pinner) C.z_delete_options_t {
 	}
 	if opts.CongestionControl.IsSome() {
 		cOpts.congestion_control = uint32(opts.CongestionControl.Unwrap())
+	}
+	if opts.Reliability.IsSome() {
+		cOpts.reliability = uint32(opts.Reliability.Unwrap())
+	}
+	if opts.AllowedDestination.IsSome() {
+		cOpts.allowed_destination = uint32(opts.AllowedDestination.Unwrap())
 	}
 	cOpts.is_express = C.bool(opts.IsExpress)
 	return cOpts

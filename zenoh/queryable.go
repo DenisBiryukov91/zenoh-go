@@ -20,6 +20,8 @@ import "C"
 import (
 	"runtime"
 	"unsafe"
+
+	"github.com/BooleanCat/option"
 )
 
 //export zenohQueryableCallbackData
@@ -62,13 +64,17 @@ func (queryable *Queryable) Drop() {
 
 // Options passed to queryable declaration.
 type QueryableOptions struct {
-	Complete bool // The completeness of the Queryable
+	Complete      bool                    // The completeness of the Queryable
+	AllowedOrigin option.Option[Locality] // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. Restricts the matching request that will be received by this Queryable to the ones that have the compatible AllowedDestination.
 }
 
 func (opts *QueryableOptions) toCOpts(_ *runtime.Pinner) C.z_queryable_options_t {
 	var cOpts C.z_queryable_options_t
 	C.z_queryable_options_default(&cOpts)
 	cOpts.complete = C.bool(opts.Complete)
+	if opts.AllowedOrigin.IsSome() {
+		cOpts.allowed_origin = uint32(opts.AllowedOrigin.Unwrap())
+	}
 	return cOpts
 }
 

@@ -70,15 +70,17 @@ func NewQueryConsolidataion(mode ConsolidationMode) QueryConsolidation {
 
 // Options passed to Session Get operation.
 type GetOptions struct {
-	Target            option.Option[QueryTarget]        // The Queryables that should be target of the query.
-	Consolidataion    option.Option[QueryConsolidation] // The replies consolidation strategy to apply on replies to the query
-	Payload           option.Option[ZBytes]             // An optional payload to attach to the query.
-	Encoding          option.Option[Encoding]           // An optional encoding of the query payload and or attachment.
-	Attachement       option.Option[ZBytes]             // The attachment to attach to the query.
-	CongestionControl option.Option[CongestionControl]  // The congestion control to apply when routing the query.
-	Priority          option.Option[Priority]           // The priority of the query.
-	IsExpress         bool                              // If set to ``true``, this query will not be batched. This usually has a positive impact on latency but negative impact on throughput.
-	TimeoutMs         uint64                            // The timeout for the query in milliseconds. 0 means default query timeout from zenoh configuration.
+	Target             option.Option[QueryTarget]        // The Queryables that should be target of the query.
+	Consolidataion     option.Option[QueryConsolidation] // The replies consolidation strategy to apply on replies to the query
+	Payload            option.Option[ZBytes]             // An optional payload to attach to the query.
+	Encoding           option.Option[Encoding]           // An optional encoding of the query payload and or attachment.
+	Attachement        option.Option[ZBytes]             // The attachment to attach to the query.
+	CongestionControl  option.Option[CongestionControl]  // The congestion control to apply when routing the query.
+	Priority           option.Option[Priority]           // The priority of the query.
+	IsExpress          bool                              // If set to ``true``, this query will not be batched. This usually has a positive impact on latency but negative impact on throughput.
+	TimeoutMs          uint64                            // The timeout for the query in milliseconds. 0 means default query timeout from zenoh configuration.
+	AllowedDestination option.Option[Locality]           // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The allowed destination for the query.
+	AcceptReplies      option.Option[ReplyKeyexpr]       // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The accepted replies for the query.
 }
 
 func (opts *GetOptions) toCOpts(pinner *runtime.Pinner) (C.z_get_options_t, *C.zc_cgo_bytes_data_t, *C.zc_internal_encoding_data_t, *C.zc_cgo_bytes_data_t) {
@@ -113,6 +115,12 @@ func (opts *GetOptions) toCOpts(pinner *runtime.Pinner) (C.z_get_options_t, *C.z
 		cOpts.consolidation.mode = int32(opts.Consolidataion.Unwrap().mode)
 	}
 	cOpts.timeout_ms = C.uint64_t(opts.TimeoutMs)
+	if opts.AllowedDestination.IsSome() {
+		cOpts.allowed_destination = uint32(opts.AllowedDestination.Unwrap())
+	}
+	if opts.AcceptReplies.IsSome() {
+		cOpts.accept_replies = uint32(opts.AcceptReplies.Unwrap())
+	}
 	return cOpts, payload, encoding, attachment
 }
 

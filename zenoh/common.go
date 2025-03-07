@@ -18,6 +18,7 @@ package zenoh
 // #include "zenoh_cgo.h"
 // static const z_priority_t CGO_Z_PRIORITY_DEFAULT = Z_PRIORITY_DEFAULT;
 // static const z_congestion_control_t CGO_Z_CONGESTION_CONTROL_DEFAULT = Z_CONGESTION_CONTROL_DEFAULT;
+// static const z_reliability_t CGO_Z_RELIABILITY_DEFAULT = Z_RELIABILITY_DEFAULT;
 import "C"
 import (
 	"unsafe"
@@ -95,3 +96,36 @@ type qos struct {
 	congestionControl CongestionControl
 	isExpress         bool
 }
+
+// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
+//
+// The publisher reliability.
+// Currently `reliability` does not trigger any data retransmission on the wire. It is rather used as a marker on the wire and it may be used to select the best link available (e.g. TCP for reliable data and UDP for best effort data).
+type Reliability int
+
+const (
+	ReliabilityBestEffort Reliability = C.Z_RELIABILITY_BEST_EFFORT // Defines reliability as ``best effort``.
+	ReliabilityReliable   Reliability = C.Z_RELIABILITY_RELIABLE    // Defines reliability as ``reliable``.
+	ReliabilityDefault    Reliability = C.CGO_Z_RELIABILITY_DEFAULT
+)
+
+// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
+//
+// The locality of data to be received or targeted.
+type Locality int
+
+const (
+	LocalityAny          Locality    = C.ZC_LOCALITY_ANY           // Any.
+	LocalitySessionLocal Locality    = C.ZC_LOCALITY_SESSION_LOCAL // Only from/to local sessions.
+	LocalityRemote       Reliability = C.ZC_LOCALITY_REMOTE        // Only from/to remote sessions.
+)
+
+// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
+//
+// Key expressions types to which Queryable should reply to.
+type ReplyKeyexpr int
+
+const (
+	ReplyKeyexprAny           ReplyKeyexpr = C.ZC_REPLY_KEYEXPR_ANY            // Replies to any key expression queries.
+	ReplyKeyexprMatchingQuery ReplyKeyexpr = C.ZC_REPLY_KEYEXPR_MATCHING_QUERY // Replies to any key expression queries.
+)

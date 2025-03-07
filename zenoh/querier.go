@@ -28,12 +28,14 @@ import (
 //
 // Options passed to querier declaration.
 type QuerierOptions struct {
-	Target            option.Option[QueryTarget]        // The Queryables that should be target of the querier queries.
-	Consolidataion    option.Option[QueryConsolidation] // The replies consolidation strategy to apply on replies to the querier queries.
-	CongestionControl option.Option[CongestionControl]  // The congestion control to apply when routing the query.
-	Priority          option.Option[Priority]           // The priority of the querier queries.
-	IsExpress         bool                              // If set to ``true``, the querier queries will not be batched. This usually has a positive impact on latency but negative impact on throughput.
-	TimeoutMs         uint64                            // The timeout for the querier queries in milliseconds. 0 means default query timeout from zenoh configuration.
+	Target             option.Option[QueryTarget]        // The Queryables that should be target of the querier queries.
+	Consolidataion     option.Option[QueryConsolidation] // The replies consolidation strategy to apply on replies to the querier queries.
+	CongestionControl  option.Option[CongestionControl]  // The congestion control to apply when routing the query.
+	Priority           option.Option[Priority]           // The priority of the querier queries.
+	IsExpress          bool                              // If set to ``true``, the querier queries will not be batched. This usually has a positive impact on latency but negative impact on throughput.
+	TimeoutMs          uint64                            // The timeout for the querier queries in milliseconds. 0 means default query timeout from zenoh configuration.
+	AllowedDestination option.Option[Locality]           // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The allowed destination for the querier queries.
+	AcceptReplies      option.Option[ReplyKeyexpr]       // This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The accepted replies for the querier queries.
 }
 
 func (opts *QuerierOptions) toCOpts(_pinner *runtime.Pinner) C.z_querier_options_t {
@@ -53,6 +55,12 @@ func (opts *QuerierOptions) toCOpts(_pinner *runtime.Pinner) C.z_querier_options
 		cOpts.consolidation.mode = int32(opts.Consolidataion.Unwrap().mode)
 	}
 	cOpts.timeout_ms = C.uint64_t(opts.TimeoutMs)
+	if opts.AllowedDestination.IsSome() {
+		cOpts.allowed_destination = uint32(opts.AllowedDestination.Unwrap())
+	}
+	if opts.AcceptReplies.IsSome() {
+		cOpts.accept_replies = uint32(opts.AcceptReplies.Unwrap())
+	}
 	return cOpts
 }
 

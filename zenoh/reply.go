@@ -77,6 +77,7 @@ func newReplyFromC(cReplyData C.zc_cgo_reply_data_t) Reply {
 		s.keyexpr = newKeyExprFromC(cReplyData.keyexpr)
 		s.encoding = newEncodingFromC(cReplyData.encoding)
 		s.kind = SampleKind(cReplyData.kind)
+		s.reliability = Reliability(cReplyData.reliability)
 		if cReplyData.timestamp != nil {
 			s.timestamp = option.Some(TimeStamp{timestamp: *cReplyData.timestamp})
 		}

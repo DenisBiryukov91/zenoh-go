@@ -29,13 +29,14 @@ const (
 
 // A Zenoh sample.
 type Sample struct {
-	keyexpr    KeyExpr
-	payload    ZBytes
-	kind       SampleKind
-	encoding   Encoding
-	timestamp  option.Option[TimeStamp]
-	qos        qos
-	attachment option.Option[ZBytes]
+	keyexpr     KeyExpr
+	payload     ZBytes
+	kind        SampleKind
+	encoding    Encoding
+	timestamp   option.Option[TimeStamp]
+	qos         qos
+	attachment  option.Option[ZBytes]
+	reliability Reliability
 }
 
 // Return the key expression of the sample.
@@ -83,12 +84,20 @@ func (sample *Sample) IsExpress() bool {
 	return sample.qos.isExpress
 }
 
+// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
+//
+// Return sample qos reliability value.
+func (sample *Sample) Reliability() Reliability {
+	return sample.reliability
+}
+
 func newSampleFromC(cSampleData C.zc_cgo_sample_data_t) Sample {
 	var s Sample
 	s.payload = newZBytesFromC(cSampleData.payload)
 	s.keyexpr = newKeyExprFromC(cSampleData.keyexpr)
 	s.encoding = newEncodingFromC(cSampleData.encoding)
 	s.kind = SampleKind(cSampleData.kind)
+	s.reliability = Reliability(cSampleData.reliability)
 	if cSampleData.timestamp != nil {
 		s.timestamp = option.Some(TimeStamp{timestamp: *cSampleData.timestamp})
 	}

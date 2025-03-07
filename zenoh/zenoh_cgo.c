@@ -47,7 +47,8 @@ zc_cgo_sample_data_t zc_cgo_sample_get_data(z_loaned_sample_t *sample) {
       .attachment = zc_cgo_bytes_get_data(z_sample_attachment(sample)),
       .keyexpr = zc_cgo_keyexpr_get_data(z_sample_keyexpr(sample)),
       .timestamp = z_sample_timestamp(sample),
-      .kind = z_sample_kind(sample)};
+      .kind = z_sample_kind(sample),
+      .reliability = z_sample_reliability(sample)};
 }
 
 zc_cgo_query_data_t zc_cgo_query_get_data(z_loaned_query_t *query) {
@@ -86,7 +87,8 @@ zc_cgo_reply_data_t zc_cgo_reply_get_data(z_loaned_reply_t *reply) {
         .attachment = zc_cgo_bytes_get_data(z_sample_attachment(sample)),
         .keyexpr = zc_cgo_keyexpr_get_data(z_sample_keyexpr(sample)),
         .timestamp = z_sample_timestamp(sample),
-        .kind = z_sample_kind(sample)};
+        .kind = z_sample_kind(sample),
+        .reliability = z_sample_reliability(sample)};
   } else {
     const z_loaned_reply_err_t *err = z_reply_err(reply);
     zc_cgo_reply_data_t out = {0};

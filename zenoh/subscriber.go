@@ -20,6 +20,8 @@ import "C"
 import (
 	"runtime"
 	"unsafe"
+
+	"github.com/BooleanCat/option"
 )
 
 //export zenohSubscriberCallbackData
@@ -69,11 +71,15 @@ func (subscriber *Subscriber) KeyExpr() KeyExpr {
 
 // Options passed to subscriber declaration
 type SubscriberOptions struct {
+	AllowedOrigin option.Option[Locality] // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. Restricts the matching publications that will be received by this Subscriber to the ones that have the compatible AllowedDestination.
 }
 
 func (opts *SubscriberOptions) toCOpts(_ *runtime.Pinner) C.z_subscriber_options_t {
 	var cOpts C.z_subscriber_options_t
 	C.z_subscriber_options_default(&cOpts)
+	if opts.AllowedOrigin.IsSome() {
+		cOpts.allowed_origin = uint32(opts.AllowedOrigin.Unwrap())
+	}
 	return cOpts
 }
 

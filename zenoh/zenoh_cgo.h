@@ -35,6 +35,7 @@ typedef struct {
   zc_cgo_bytes_data_t attachment;
   const z_timestamp_t *timestamp;
   z_sample_kind_t kind;
+  z_reliability_t reliability;
 } zc_cgo_sample_data_t;
 
 typedef struct {
@@ -57,6 +58,7 @@ typedef struct {
   zc_cgo_bytes_data_t attachment;
   const z_timestamp_t *timestamp;
   z_sample_kind_t kind;
+  z_reliability_t reliability; 
 } zc_cgo_reply_data_t;
 
 zc_cgo_bytes_data_t zc_cgo_bytes_get_data(const z_loaned_bytes_t *bytes);
