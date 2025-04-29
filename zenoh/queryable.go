@@ -125,3 +125,8 @@ func (session *Session) DeclareBackgroundQueryable(keyexpr KeyExpr, closure Clos
 	}
 	return NewZError(res, "Failed to declare background Queryable")
 }
+
+// Get the key expression of the queryable.
+func (queryable *Queryable) KeyExpr() KeyExpr {
+	return newKeyExprFromC(C.zc_cgo_keyexpr_get_data(C.z_queryable_keyexpr(C.z_queryable_loan(queryable.queryable))))
+}
