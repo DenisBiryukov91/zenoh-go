@@ -12,7 +12,7 @@ runs:
       id: clone-zenoh-c
       shell: bash
       run: |
-          git clone https://github.com/eclipse-zenoh/zenoh-c.git
+          git clone --depth 1 https://github.com/eclipse-zenoh/zenoh-c.git
           cd zenoh-c
           echo "rev=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
@@ -28,5 +28,5 @@ runs:
       run: |
         cd zenoh-c
         mkdir build && cd build
-        cmake .. -DZENOHC_BUILD_WITH_UNSTABLE_API=ON -DCMAKE_INSTALL_PREFIX="=${{ inputs.install-prefix }}"
+        cmake .. -DZENOHC_BUILD_WITH_UNSTABLE_API=ON -DCMAKE_INSTALL_PREFIX="${{ inputs.install-prefix }}"
         cmake --build . --target install --config Release
