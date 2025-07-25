@@ -71,7 +71,7 @@ func (subscriber *Subscriber) KeyExpr() KeyExpr {
 
 // Options passed to subscriber declaration
 type SubscriberOptions struct {
-	AllowedOrigin option.Option[Locality] // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. Restrict the matching publications that will be received by this Subscriber to the ones that have the compatible AllowedDestination.
+	AllowedOrigin option.Option[Locality] // Restrict the matching publications that will be received by this Subscriber to the ones that have compatible AllowedDestination.
 }
 
 func (opts *SubscriberOptions) toCOpts(_ *runtime.Pinner) C.z_subscriber_options_t {

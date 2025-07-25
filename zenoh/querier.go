@@ -24,8 +24,6 @@ import (
 	"github.com/BooleanCat/option"
 )
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // Options passed to querier declaration.
 type QuerierOptions struct {
 	Target             option.Option[QueryTarget]        // The Queryables that should be target of the querier queries.
@@ -34,7 +32,7 @@ type QuerierOptions struct {
 	Priority           option.Option[Priority]           // The priority of the querier queries.
 	IsExpress          bool                              // If set to ``true``, the querier queries will not be batched. This usually has a positive impact on latency but negative impact on throughput.
 	TimeoutMs          uint64                            // The timeout for the querier queries in milliseconds. 0 means default query timeout from zenoh configuration.
-	AllowedDestination option.Option[Locality]           // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The allowed destination for the querier queries.
+	AllowedDestination option.Option[Locality]           // Restrict the queryables which receive the querier queries to the ones with compatible AllowedOrigin.
 	AcceptReplies      option.Option[ReplyKeyexpr]       // This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The accepted replies for the querier queries.
 }
 
@@ -64,8 +62,6 @@ func (opts *QuerierOptions) toCOpts(_pinner *runtime.Pinner) C.z_querier_options
 	return cOpts
 }
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // A Zenoh querier.
 //
 // Sends queries to matching queryables.
@@ -73,8 +69,6 @@ type Querier struct {
 	querier *C.z_owned_querier_t
 }
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // Options passed to [Querier.Get] operation.
 type QuerierGetOptions struct {
 	Payload     option.Option[ZBytes]   // An optional payload to attach to the query.
@@ -104,15 +98,11 @@ func (opts *QuerierGetOptions) toCOpts(pinner *runtime.Pinner) (C.z_querier_get_
 	return cOpts, payload, encoding, attachment
 }
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // Get the key expression of the querier.
 func (querier *Querier) KeyExpr() KeyExpr {
 	return newKeyExprFromC(C.zc_cgo_keyexpr_get_data(C.z_querier_keyexpr(C.z_querier_loan(querier.querier))))
 }
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // Construct a querier for the given key expression.
 // Querier MUST be explicitly destroyed using [Querier.Drop] once it is no longer needed.
 func (session *Session) DeclareQuerier(keyexpr KeyExpr, options *QuerierOptions) (Querier, error) {
@@ -134,15 +124,11 @@ func (session *Session) DeclareQuerier(keyexpr KeyExpr, options *QuerierOptions)
 	return Querier{}, NewZError(res, "Failed to declare Querier")
 }
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // Destroy the querier.
 func (querier *Querier) Drop() {
 	C.z_querier_drop(C.z_querier_move(querier.querier))
 }
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // Query data from the matching queryables in the system.
 // Replies are provided through a callback function, if handler is a [Closure], through returned receiver if it is a [RingChannel] or a [FifoChannel].
 func (querier *Querier) Get(parameters string, handler Handler[Reply], get_options *QuerierGetOptions) (<-chan Reply, error) {

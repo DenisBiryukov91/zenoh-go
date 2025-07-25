@@ -65,7 +65,7 @@ func (queryable *Queryable) Drop() {
 // Options passed to queryable declaration.
 type QueryableOptions struct {
 	Complete      bool                    // The completeness of the Queryable
-	AllowedOrigin option.Option[Locality] // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. Restrict the matching requests that will be received by this Queryable to the ones that have the compatible AllowedDestination.
+	AllowedOrigin option.Option[Locality] // Restrict the matching requests that will be received by this Queryable to the ones that have compatible AllowedDestination.
 }
 
 func (opts *QueryableOptions) toCOpts(_ *runtime.Pinner) C.z_queryable_options_t {

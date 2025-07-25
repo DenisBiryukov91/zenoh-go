@@ -21,8 +21,6 @@ import (
 	"unsafe"
 )
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // A struct that indicates if there exist Subscribers matching the Publisher's key expression or Queryables matching Querier's key expression and target.
 type MatchingStatus struct {
 	Matching bool // ``True`` if there exist matching Zenoh entities, ``false`` otherwise.
@@ -38,8 +36,6 @@ func zenohMatchingListenerDrop(context unsafe.Pointer) {
 	(*closureContext[MatchingStatus])(context).drop()
 }
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // A Zenoh matching listener.
 //
 // A listener that sends notifications when the [MatchingStatus] of a publisher or a querier changes.
@@ -48,23 +44,17 @@ type MatchingListener struct {
 	receiver <-chan MatchingStatus
 }
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // Return matching listener's receiver if it was constructed with channel, nil otherwise.
 func (listener *MatchingListener) Handler() <-chan MatchingStatus {
 	return listener.receiver
 }
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // Destroy the matching listner.
 // This is equivalent to calling [MatchingListener.Undeclare] and discarding its return value.
 func (listener *MatchingListener) Drop() {
 	C.z_matching_listener_drop(C.z_matching_listener_move(listener.listener))
 }
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // Undeclare and destroy the matching listener.
 func (listener *MatchingListener) Undeclare() error {
 	res := int8(C.z_undeclare_matching_listener(C.z_matching_listener_move(listener.listener)))
@@ -74,8 +64,6 @@ func (listener *MatchingListener) Undeclare() error {
 	return NewZError(res, "Failed to undeclare Matching Listener")
 }
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // Get publisher matching status - i.e. if there are any subscribers matching its key expression.
 func (publisher *Publisher) GetMatchingStatus() (MatchingStatus, error) {
 	var status C.z_matching_status_t
@@ -87,8 +75,6 @@ func (publisher *Publisher) GetMatchingStatus() (MatchingStatus, error) {
 	return MatchingStatus{}, NewZError(res, "Failed to retrieve publisher Matching Status")
 }
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // Construct matching listener, registering a handler for notifying subscribers matching with a given publisher.
 // Matching listener MUST be explicitly destroyed using [MatchingListener.Undeclare] or [MatchingListener.Drop] once it is no longer needed.
 func (publisher *Publisher) DeclareMatchingListener(handler Handler[MatchingStatus]) (MatchingListener, error) {
@@ -106,8 +92,6 @@ func (publisher *Publisher) DeclareMatchingListener(handler Handler[MatchingStat
 	return MatchingListener{}, NewZError(res, "Failed to declare Matching Listener for publisher")
 }
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // Declare a matching listener, registering a callback for notifying subscribers matching with a given publisher.
 // The callback will be run in the background until the corresponding publisher is dropped.
 func (publisher *Publisher) DeclareBackgroundMatchingListener(closure Closure[MatchingStatus]) error {
@@ -123,8 +107,6 @@ func (publisher *Publisher) DeclareBackgroundMatchingListener(closure Closure[Ma
 	return NewZError(res, "Failed to declare background Matching Listener for publisher")
 }
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // Get querier matching status - i.e. if there are any queryables matching its key expression and target.
 func (querier *Querier) GetMatchingStatus() (MatchingStatus, error) {
 	var status C.z_matching_status_t
@@ -136,8 +118,6 @@ func (querier *Querier) GetMatchingStatus() (MatchingStatus, error) {
 	return MatchingStatus{}, NewZError(res, "Failed to retrieve querier Matching Status")
 }
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // Construct matching listener, registering a handler for notifying queryables matching with a given querier.
 // Matching listener MUST be explicitly destroyed using [MatchingListener.Undeclare] or [MatchingListener.Drop] once it is no longer needed.
 func (querier *Querier) DeclareMatchingListener(handler Handler[MatchingStatus]) (MatchingListener, error) {
@@ -155,8 +135,6 @@ func (querier *Querier) DeclareMatchingListener(handler Handler[MatchingStatus])
 	return MatchingListener{}, NewZError(res, "Failed to declare Matching Listener for querier")
 }
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // Declare a matching listener, registering a callback for notifying queryables matching with a given querier.
 // The callback will be run in the background until the corresponding publisher is dropped.
 func (querier *Querier) DeclareBackgroundMatchingListener(closure Closure[MatchingStatus]) error {

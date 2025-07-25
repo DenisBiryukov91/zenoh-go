@@ -109,8 +109,6 @@ const (
 	ReliabilityDefault    Reliability = C.CGO_Z_RELIABILITY_DEFAULT
 )
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
-//
 // The locality of data to be received or targeted.
 type Locality int
 
