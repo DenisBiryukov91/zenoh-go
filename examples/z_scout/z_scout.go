@@ -25,15 +25,19 @@ func main() {
 	zenoh.InitLoggerFromEnvOr("error")
 
 	fmt.Println("Scouting...")
-	// Create FIFO channel
-	hellos := make(chan zenoh.Hello, 16)
-	zenoh.Scout(zenoh.NewConfigDefault(),
-		func(hello zenoh.Hello) { hellos <- hello },
-		func() { close(hellos) },
+	var hellos, err = zenoh.Scout(zenoh.NewConfigDefault(),
+		zenoh.NewFifoChannel[zenoh.Hello](16),
 		&zenoh.ScoutOptions{TimeoutMs: 1000})
+
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(-1)
+	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
+	fmt.Println("Press CTRL-C to quit...")
+
 	for {
 		select {
 		case <-stop:

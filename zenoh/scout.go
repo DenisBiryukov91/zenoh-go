@@ -129,21 +129,31 @@ func (opts *ScoutOptions) toCOpts() C.z_scout_options_t {
 }
 
 // Scout for routers and/or peers.
-func Scout(config Config, callback func(Hello), drop func(), options *ScoutOptions) error {
+// This function will block if handler returns a nil channel part and will run in the background otherwise.
+func Scout(config Config, handler Handler[Hello], options *ScoutOptions) (<-chan Hello, error) {
+	var callback, drop, channel = handler.ToCbDropHandler()
 	closure := newClosure(callback, drop)
 	var cClosure C.z_owned_closure_hello_t
 	C.z_closure_hello(&cClosure, (*[0]byte)(C.zenohScoutCallback), (*[0]byte)(C.zenohScoutDrop), unsafe.Pointer(closure))
 	cConfig := config.toC()
 	res := int8(0)
 	if options == nil {
-		res = int8(C.z_scout(C.z_config_move(&cConfig), C.z_closure_hello_move(&cClosure), nil))
+		if channel == nil {
+			res = int8(C.z_scout(C.z_config_move(&cConfig), C.z_closure_hello_move(&cClosure), nil))
+		} else {
+			go C.z_scout(C.z_config_move(&cConfig), C.z_closure_hello_move(&cClosure), nil)
+		}
 	} else {
 		cOpts := options.toCOpts()
-		res = int8(C.z_scout(C.z_config_move(&cConfig), C.z_closure_hello_move(&cClosure), &cOpts))
+		if channel == nil {
+			res = int8(C.z_scout(C.z_config_move(&cConfig), C.z_closure_hello_move(&cClosure), &cOpts))
+		} else {
+			go C.z_scout(C.z_config_move(&cConfig), C.z_closure_hello_move(&cClosure), &cOpts)
+		}
 	}
 
 	if res == 0 {
-		return nil
+		return channel, nil
 	}
-	return NewZError(res, "Failed to perform Scout operation")
+	return nil, NewZError(res, "Failed to perform Scout operation")
 }
