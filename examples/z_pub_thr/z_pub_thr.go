@@ -87,7 +87,7 @@ func parseArgs() Args {
 	var isExpress bool
 
 	pflag.Uint8VarP(&priorityValue, "priority", "p", uint8(defaultPriority), fmt.Sprintf("Priority for sending data [%d - %d].", int(zenoh.PriorityRealTime), int(zenoh.PriorityBackground)))
-	pflag.BoolVar(&isExpress, "express", false, "Batch messages.")
+	pflag.BoolVar(&isExpress, "express", false, "Disable message batching")
 	var args Args
 	args.config = utils.ParseConfig()
 	args.isExpress = isExpress

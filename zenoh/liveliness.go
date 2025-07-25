@@ -123,6 +123,29 @@ func (liveliness *Liveliness) DeclareSubscriber(keyexpr KeyExpr, handler Handler
 	return Subscriber{}, NewZError(res, "Failed to declare LivelinessSubscriber")
 }
 
+// Construct and declare a background subscriber on liveliness tokens that intersect `keyexpr`.
+// Subscriber callback will be called to process the messages, until the corresponding session is closed or dropped.
+func (liveliness *Liveliness) DeclareBackgroundSubscriber(keyexpr KeyExpr, closure Closure[Sample], options *LivelinessSubscriberOptions) error {
+	subClosure := newClosure(closure.Call, closure.Drop)
+	var cClosure C.z_owned_closure_sample_t
+	C.z_closure_sample(&cClosure, (*[0]byte)(C.zenohSubscriberCallback), (*[0]byte)(C.zenohSubscriberDrop), unsafe.Pointer(subClosure))
+	pinner := runtime.Pinner{}
+	cKeyexpr := keyexpr.toC(&pinner)
+	res := int8(0)
+	if options == nil {
+		res = int8(C.z_liveliness_declare_background_subscriber(C.z_session_loan(liveliness.session.session), C.z_view_keyexpr_loan(&cKeyexpr), C.z_closure_sample_move(&cClosure), nil))
+	} else {
+		cOpts := options.toCOpts(&pinner)
+		res = int8(C.z_liveliness_declare_background_subscriber(C.z_session_loan(liveliness.session.session), C.z_view_keyexpr_loan(&cKeyexpr), C.z_closure_sample_move(&cClosure), &cOpts))
+	}
+	pinner.Unpin()
+
+	if res == 0 {
+		return nil
+	}
+	return NewZError(res, "Failed to declare background LivelinessSubscriber")
+}
+
 // Options to pass to [Liveliness.Get] operation.
 type LivelinessGetOptions struct {
 	TimeoutMs uint64 // The timeout for the liveliness query in milliseconds. 0 means default query timeout from zenoh configuration.

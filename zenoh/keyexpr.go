@@ -29,13 +29,9 @@ import (
 // Key expressions can identify a single key or a set of keys.
 //
 // Examples :
-//   - “"key/expression"“.
-//   - “"key/ex*"“.
-//
-// Internally key expressiobn can be either:
-//   - A plain string expression.
-//   - A pure numerical id.
-//   - The combination of a numerical prefix and a string suffix.
+//   - “"key/expression"“ - defines a single key.
+//   - “"key/ex/*"“ - defines a set of keys starting with "key/ex/" followed by a single arbitrary chunk.
+//   - “"key/ex/**"“ - defines a set of keys starting with "key/ex/" followed by a any number of arbitrary chunks.
 //
 // [Key expression]: https://zenoh.io/docs/manual/abstractions/#key-expression
 type KeyExpr struct {

@@ -97,6 +97,6 @@ func parseArgs() Args {
 	var samples uint64
 	var numMessages uint64
 	pflag.Uint64VarP(&samples, "samples", "s", defaultsamples, "Number of throughput measurements.")
-	pflag.Uint64VarP(&numMessages, "number", "n", defaultNumber, "Number of messages in each throughput measurements.")
+	pflag.Uint64VarP(&numMessages, "number", "n", defaultNumber, "Number of messages in each throughput measurement.")
 	return Args{Samples: samples, numMessages: numMessages, config: utils.ParseConfig()}
 }

@@ -122,16 +122,16 @@ def main():
 
     test_examples(
         build_peer_cmd("z_sub"),
-        ["Received PUT ('demo/example/zenoh-go-pub"],
+        ["Received PUT ('demo/example/zenoh-go-put"],
         build_client_cmd("z_put"),
-        ["Putting Data ('demo/example/zenoh-go-pub'"],
+        ["Putting Data ('demo/example/zenoh-go-put'"],
     )
 
     test_examples(
         build_peer_cmd("z_sub"),
-        ["Received DELETE ('demo/example/zenoh-go-pub'"],
+        ["Received DELETE ('demo/example/zenoh-go-put'"],
         build_client_cmd("z_delete"),
-        ["Deleting resources matching 'demo/example/zenoh-go-pub'"],
+        ["Deleting resources matching 'demo/example/zenoh-go-put'"],
     )
 
     test_examples(

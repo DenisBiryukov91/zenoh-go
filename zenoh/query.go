@@ -82,7 +82,7 @@ func newQueryFromC(cQueryData C.zc_cgo_query_data_t) Query {
 
 // Options passed to [Query.Reply] operation.
 type QueryReplyOptions struct {
-	Encoding          option.Option[Encoding]          // The encoding of the reply payload.
+	Encoding          option.Option[Encoding]          // The encoding of the reply payload and/or attachment.
 	Attachement       option.Option[ZBytes]            // The attachment to attach to this reply.
 	TimeStamp         option.Option[TimeStamp]         // The timestamp of the reply.
 	CongestionControl option.Option[CongestionControl] // The congestion control to apply when routing the reply.

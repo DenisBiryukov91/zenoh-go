@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"zenoh-go/examples/utils"
 	"zenoh-go/zenoh"
 
@@ -43,6 +44,7 @@ func main() {
 	}
 
 	storage := make(map[string]zenoh.Sample)
+	var mu = sync.Mutex{}
 
 	subHandler := func(sample zenoh.Sample) {
 		fmt.Printf(">> [Subscriber] Received %s ('%s': '%s')\n",
@@ -50,12 +52,14 @@ func main() {
 			sample.KeyExpr(),
 			sample.Payload())
 
+		mu.Lock()
 		switch sample.Kind() {
 		case zenoh.SampleKindPut:
 			storage[keyexpr.String()] = sample
 		case zenoh.SampleKindDelete:
 			delete(storage, keyexpr.String())
 		}
+		mu.Unlock()
 	}
 
 	fmt.Printf("Declaring Subscriber on '%s'...\n", keyexpr)
@@ -70,12 +74,16 @@ func main() {
 	opts.Complete = args.complete
 	queryableHandler := func(query zenoh.Query) {
 		defer query.Drop()
+		mu.Lock()
 		for _, s := range storage {
 			if s.KeyExpr().Intersects(query.KeyExpr()) {
 				query.Reply(s.KeyExpr(), s.Payload(), nil)
 			}
 		}
+		mu.Unlock()
 	}
+
+	fmt.Printf("Declaring Queryable on '%s'...\n", keyexpr)
 	queryable, err := session.DeclareQueryable(keyexpr, zenoh.Closure[zenoh.Query]{Call: queryableHandler}, &opts)
 	if err != nil {
 		fmt.Println("Unable to declare queryable.")

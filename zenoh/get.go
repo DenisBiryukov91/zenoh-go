@@ -71,14 +71,14 @@ func NewQueryConsolidataion(mode ConsolidationMode) QueryConsolidation {
 // Options passed to Session Get operation.
 type GetOptions struct {
 	Target             option.Option[QueryTarget]        // The Queryables that should be target of the query.
-	Consolidataion     option.Option[QueryConsolidation] // The replies consolidation strategy to apply on replies to the query
+	Consolidataion     option.Option[QueryConsolidation] // The replies consolidation strategy to apply on replies to the query.
 	Payload            option.Option[ZBytes]             // An optional payload to attach to the query.
-	Encoding           option.Option[Encoding]           // An optional encoding of the query payload and or attachment.
+	Encoding           option.Option[Encoding]           // An optional encoding of the query payload and/or attachment.
 	Attachement        option.Option[ZBytes]             // The attachment to attach to the query.
 	CongestionControl  option.Option[CongestionControl]  // The congestion control to apply when routing the query.
 	Priority           option.Option[Priority]           // The priority of the query.
 	IsExpress          bool                              // If set to ``true``, this query will not be batched. This usually has a positive impact on latency but negative impact on throughput.
-	TimeoutMs          uint64                            // The timeout for the query in milliseconds. 0 means default query timeout from zenoh configuration.
+	TimeoutMs          uint64                            // The timeout for the query reply in milliseconds. 0 means default query timeout from zenoh configuration.
 	AllowedDestination option.Option[Locality]           // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The allowed destination for the query.
 	AcceptReplies      option.Option[ReplyKeyexpr]       // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The accepted replies for the query.
 }

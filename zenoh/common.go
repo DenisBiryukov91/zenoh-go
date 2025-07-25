@@ -127,5 +127,5 @@ type ReplyKeyexpr int
 
 const (
 	ReplyKeyexprAny           ReplyKeyexpr = C.ZC_REPLY_KEYEXPR_ANY            // Replies to any key expression queries.
-	ReplyKeyexprMatchingQuery ReplyKeyexpr = C.ZC_REPLY_KEYEXPR_MATCHING_QUERY // Replies to any key expression queries.
+	ReplyKeyexprMatchingQuery ReplyKeyexpr = C.ZC_REPLY_KEYEXPR_MATCHING_QUERY // Replies only to queries with intersecting key expressions.
 )

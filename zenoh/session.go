@@ -31,7 +31,7 @@ func zenohZIdDrop(context unsafe.Pointer) {
 	(*closureContext[Id])(context).drop()
 }
 
-// A Zenoh session
+// A Zenoh session.
 type Session struct {
 	session *C.z_owned_session_t
 }
@@ -77,7 +77,7 @@ func Open(config Config, options *SessionOptions) (Session, error) {
 	}
 }
 
-// Close Zenoh session. This also calls drop functions for not yet dropped or undeclared Zenoh entites (subscribers, queriers, etc).
+// Close Zenoh session. This also calls drop functions for not yet dropped or undeclared Zenoh entites (subscribers, queryables, get queries).
 // After this operation, all calls for network operations for entites declared on this session will return an error.
 func (session *Session) Close(options *SessionCloseOptions) error {
 	res := int8(0)
@@ -92,6 +92,11 @@ func (session *Session) Close(options *SessionCloseOptions) error {
 	} else {
 		return NewZError(res, "Failed to close the session")
 	}
+}
+
+// Checks if Zenoh session is closed.
+func (session Session) IsClosed() bool {
+	return bool(C.z_session_is_closed(C.z_session_loan(session.session)))
 }
 
 // Close and destroy the session. This MUST be called once all work with session is finished.

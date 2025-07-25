@@ -17,7 +17,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/signal"
 	"zenoh-go/examples/utils"
 	"zenoh-go/zenoh"
 
@@ -42,9 +41,6 @@ func main() {
 		os.Exit(-1)
 	}
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
-
 	fmt.Printf("Deleting resources matching '%s'...\n", keyexpr)
 	if err := session.Delete(keyexpr, nil); err != nil {
 		fmt.Printf("Delete failed: %v\n", err)
@@ -52,7 +48,7 @@ func main() {
 }
 
 const (
-	defaultKeyexpr = "demo/example/zenoh-go-pub"
+	defaultKeyexpr = "demo/example/zenoh-go-put"
 )
 
 type Args struct {

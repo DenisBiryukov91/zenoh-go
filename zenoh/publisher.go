@@ -136,7 +136,7 @@ type PublisherOptions struct {
 	Priority           option.Option[Priority]          // The priority of messages from this publisher.
 	IsExpress          bool                             // If set to ``true``, the messages of this publisher will not be batched. This usually has a positive impact on latency but negative impact on throughput.
 	Reliability        option.Option[Reliability]       // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The publisher reliability.
-	AllowedDestination option.Option[Locality]          // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.  The allowed destination for this publisher.
+	AllowedDestination option.Option[Locality]          // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. Restrict the subscribers which receive the publications from this publisher to the ones with matching AllowedOrigin.
 }
 
 func (opts *PublisherOptions) toCOpts(pinner *runtime.Pinner) C.z_publisher_options_t {
@@ -196,7 +196,7 @@ type PutOptions struct {
 	Priority           option.Option[Priority]          // The priority of the publication.
 	IsExpress          bool                             // If set to ``true``, the message will not be batched. This usually has a positive impact on latency but negative impact on throughput.
 	Reliability        option.Option[Reliability]       // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The put operation reliability.
-	AllowedDestination option.Option[Locality]          // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.  The allowed destination for this put message.
+	AllowedDestination option.Option[Locality]          // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.  Restrict the subscribers which receive the publication to the ones with matching AllowedOrigin.
 }
 
 func (opts *PutOptions) toCOpts(pinner *runtime.Pinner) (C.z_put_options_t, *C.zc_internal_encoding_data_t, *C.zc_cgo_bytes_data_t) {

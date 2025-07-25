@@ -48,7 +48,7 @@ func NewConfigDefault() Config {
 	return Config{config: &c}
 }
 
-// Create a configuration from the JSON file.
+// Create a configuration from the JSON5 file.
 func NewConfigFromFile(file string) (Config, error) {
 	var c C.z_owned_config_t
 	fileStr := C.CString(file)
@@ -62,7 +62,7 @@ func NewConfigFromFile(file string) (Config, error) {
 	}
 }
 
-// Create a configuration from the JSON string.
+// Create a configuration from the JSON5 string.
 func NewConfigFromStr(json string) (Config, error) {
 	var c C.z_owned_config_t
 	jsonStr := C.CString(json)

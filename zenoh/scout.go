@@ -70,7 +70,7 @@ const (
 	WhatDefault          What = C.CGO_DEFAULT_SCOUTING_WHAT // Use default scouting mask.
 )
 
-// A Zenoh hello message returned by a Zenoh entity to a scout message sent with [Scout].
+// A Zenoh hello message replied by a Zenoh entity to a scout message sent with [Scout].
 type Hello struct {
 	whatAmI  WhatAmI
 	locators []string
@@ -83,7 +83,7 @@ func newHelloFromC(cHello *C.z_loaned_hello_t) Hello {
 	loanedCLocators := C.z_string_array_loan(&cLocators)
 	locators := make([]string, int(C.z_string_array_len(loanedCLocators)))
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < len(locators); i++ {
 		s := C.z_string_array_get(loanedCLocators, C.size_t(i))
 		locators[i] = C.GoStringN(C.z_string_data(s), C.int(C.z_string_len(s)))
 	}
