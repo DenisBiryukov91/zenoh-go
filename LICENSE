@@ -1,0 +1,77 @@
+# ZettaScale Commercial License Agreement (ZCLA)
+
+*Version 1.0 — May 2025*
+
+This ZettaScale Commercial License Agreement (“Agreement”) is a legal agreement between ZettaScale Technology Ltd., ("Licensor"), and you ("Licensee"), governing your use of the ZettaScale Commercial Version of Zenoh, including proprietary extensions, components, and services provided under this Agreement (collectively, the “Software”).
+
+## 1. Definitions
+- **Open Source Zenoh:** The core Zenoh protocol implementation licensed under the Apache License, Version 2.0.
+
+- **Commercial Version:** Any version of Zenoh, Zenoh-derived tools, SDKs, plugins, cloud services, or enhancements not released under the Apache License but instead distributed under this Agreement.
+
+- **Licensee:** Any individual or legal entity obtaining the Commercial Version from ZettaScale under this Agreement.
+Deployment: Use of the Software in any commercial product, service, infrastructure, or production environment.
+
+## 2. License Grant
+Subject to the terms of this Agreement and payment of applicable fees, Licensor hereby grants Licensee a limited, non-exclusive, non-transferable, worldwide license to:
+
+- Install and use the Commercial Version internally, for the purpose and scope described in the applicable order or subscription;
+
+- Deploy the Software as part of Licensee’s commercial systems or services;
+
+- Integrate the Software into Licensee’s products or infrastructure, in accordance with the permitted use cases.
+
+
+## 3. Restrictions
+Licensee shall not, directly or indirectly:
+
+- Redistribute, sublicense, lease, or sell the Software, in whole or in part, unless explicitly permitted;
+
+- Use the Software to create derivative works or interoperable alternatives intended to replace or replicate the Commercial Version;
+
+- Reverse engineer, decompile, or disassemble the Software, except to the extent expressly permitted by law;
+
+- Use the Software in any way that violates export control laws or applicable regulations.
+
+- Use of Open Source Zenoh under Apache 2.0 remains unaffected.
+
+## 4. Term & Termination
+This license is effective upon delivery and remains in force until:
+
+- Terminated by either party with 30 days written notice (for convenience), or
+
+- Terminated immediately for material breach, including non-payment or license misuse.
+
+Upon termination, Licensee must cease use and delete all copies of the Commercial Version.
+
+## 5. Support & Updates
+If the Licensee has purchased a support plan:
+
+- Licensor will provide technical support, updates, and patches as specified;
+
+- Support is limited to the Commercial Version and may exclude core Zenoh (unless bundled).
+
+- No support is provided for modified or misused versions.
+
+## 6. Fees and Audit Rights
+Use of the Software is subject to license fees as agreed in a separate commercial agreement or purchase order.
+
+Licensor reserves the right to audit Licensee’s use to verify compliance, with reasonable notice and during business hours.
+
+## 7. Confidentiality
+The Commercial Version and related documentation are ZettaScale confidential information. Licensee agrees to maintain their confidentiality and not disclose them to third parties without written permission.
+
+## 8. Intellectual Property
+ZettaScale retains all rights, title, and interest in the Software. No rights are granted except as expressly set forth herein.
+
+Use of the Zenoh name, logo, and branding is subject to separate trademark terms.
+
+## 9. Limited Warranty and Disclaimer
+The Software is provided “AS IS”. ZettaScale disclaims all warranties not expressly stated, including any implied warranties of merchantability or fitness for a particular purpose.
+
+## 10. Limitation of Liability
+ZettaScale's total liability under this Agreement shall not exceed the amount paid by Licensee in the past 12 months. In no event shall ZettaScale be liable for indirect, incidental, or consequential damages.
+
+## 11. Governing Law
+This Agreement shall be governed by the laws of England and Wales, without regard to conflict of laws. Any disputes shall be subject to the exclusive jurisdiction of the courts of London, UK.
+
