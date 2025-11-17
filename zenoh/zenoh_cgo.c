@@ -240,62 +240,114 @@ z_result_t zc_cgo_query_reply_del(z_owned_query_t *query,
 
 z_result_t zc_cgo_get(z_owned_session_t *session,
                       zc_cgo_string_data_t keyexpr_data, const char *params,
-                      void *context, z_get_options_t *opts,
-                      zc_cgo_bytes_data_t *payload_data,
-                      zc_internal_encoding_data_t *encoding_data,
-                      zc_cgo_bytes_data_t *attachment_data) {
+                      void *context, zc_cgo_get_options_t *opts) {
   z_view_keyexpr_t keyexpr;
   z_view_keyexpr_from_substr_unchecked(&keyexpr, keyexpr_data.str_ptr,
                                        keyexpr_data.len);
   z_owned_closure_reply_t closure;
   z_closure(&closure, zenohGetCallback, zenohGetDrop, context);
+  if (opts == NULL) {
+    return z_get(z_loan(*session), z_loan(keyexpr), params, z_move(closure),
+                 NULL);
+  }
+
+  z_get_options_t options;
+  z_get_options_default(&options);
+  options.target = opts->target;
+  options.consolidation = opts->consolidation;
+  options.congestion_control = opts->congestion_control;
+  options.is_express = opts->is_express;
+  options.allowed_destination = opts->allowed_destination;
+  options.accept_replies = opts->accept_replies;
+  options.priority = opts->priority;
+  options.timeout_ms = opts->timeout_ms;
+
   z_owned_bytes_t payload, attachment;
   z_owned_encoding_t encoding;
-  if (payload_data != NULL) {
-    opts->payload = _create_moved_bytes_from_data(payload_data, &payload);
+  z_owned_cancellation_token_t cancellation_token;
+
+  if (opts->payload_data != NULL) {
+    options.payload =
+        _create_moved_bytes_from_data(opts->payload_data, &payload);
   }
-  if (encoding_data != NULL) {
-    opts->encoding = _create_moved_encoding_from_data(encoding_data, &encoding);
+  if (opts->encoding_data != NULL) {
+    options.encoding =
+        _create_moved_encoding_from_data(opts->encoding_data, &encoding);
   }
-  if (attachment_data != NULL) {
-    opts->attachment =
-        _create_moved_bytes_from_data(attachment_data, &attachment);
+  if (opts->attachment_data != NULL) {
+    options.attachment =
+        _create_moved_bytes_from_data(opts->attachment_data, &attachment);
+  }
+  if (opts->cancellation_token != NULL) {
+    z_cancellation_token_clone(&cancellation_token,
+                               z_loan(*opts->cancellation_token));
+    options.cancellation_token = z_move(cancellation_token);
   }
   return z_get(z_loan(*session), z_loan(keyexpr), params, z_move(closure),
-               opts);
+               &options);
 }
 
 z_result_t zc_cgo_liveliness_get(z_owned_session_t *session,
                                  zc_cgo_string_data_t keyexpr_data,
                                  void *context,
-                                 z_liveliness_get_options_t *opts) {
+                                 zc_cgo_liveliness_get_options_t *opts) {
   z_view_keyexpr_t keyexpr;
   z_view_keyexpr_from_substr_unchecked(&keyexpr, keyexpr_data.str_ptr,
                                        keyexpr_data.len);
   z_owned_closure_reply_t closure;
   z_closure(&closure, zenohGetCallback, zenohGetDrop, context);
+
+  if (opts == NULL) {
+    return z_liveliness_get(z_loan(*session), z_loan(keyexpr), z_move(closure),
+                            NULL);
+  }
+
+  z_liveliness_get_options_t options;
+  z_liveliness_get_options_default(&options);
+
+  options.timeout_ms = opts->timeout_ms;
+  z_owned_cancellation_token_t cancellation_token;
+  if (opts->cancellation_token != NULL) {
+    z_cancellation_token_clone(&cancellation_token,
+                               z_loan(*opts->cancellation_token));
+    options.cancellation_token = z_move(cancellation_token);
+  }
   return z_liveliness_get(z_loan(*session), z_loan(keyexpr), z_move(closure),
-                          opts);
+                          &options);
 }
 
 z_result_t zc_cgo_querier_get(z_owned_querier_t *querier, const char *params,
-                              void *context, z_querier_get_options_t *opts,
-                              zc_cgo_bytes_data_t *payload_data,
-                              zc_internal_encoding_data_t *encoding_data,
-                              zc_cgo_bytes_data_t *attachment_data) {
+                              void *context,
+                              zc_cgo_querier_get_options_t *opts) {
   z_owned_closure_reply_t closure;
   z_closure(&closure, zenohGetCallback, zenohGetDrop, context);
+
+  if (opts == NULL) {
+    return z_querier_get(z_loan(*querier), params, z_move(closure), NULL);
+  }
+
+  z_querier_get_options_t options;
+  z_querier_get_options_default(&options);
+
   z_owned_bytes_t payload, attachment;
   z_owned_encoding_t encoding;
-  if (payload_data != NULL) {
-    opts->payload = _create_moved_bytes_from_data(payload_data, &payload);
+  z_owned_cancellation_token_t cancellation_token;
+  if (opts->payload_data != NULL) {
+    options.payload =
+        _create_moved_bytes_from_data(opts->payload_data, &payload);
   }
-  if (encoding_data != NULL) {
-    opts->encoding = _create_moved_encoding_from_data(encoding_data, &encoding);
+  if (opts->encoding_data != NULL) {
+    options.encoding =
+        _create_moved_encoding_from_data(opts->encoding_data, &encoding);
   }
-  if (attachment_data != NULL) {
-    opts->attachment =
-        _create_moved_bytes_from_data(attachment_data, &attachment);
+  if (opts->attachment_data != NULL) {
+    options.attachment =
+        _create_moved_bytes_from_data(opts->attachment_data, &attachment);
   }
-  return z_querier_get(z_loan(*querier), params, z_move(closure), opts);
+  if (opts->cancellation_token != NULL) {
+    z_cancellation_token_clone(&cancellation_token,
+                               z_loan(*opts->cancellation_token));
+    options.cancellation_token = z_move(cancellation_token);
+  }
+  return z_querier_get(z_loan(*querier), params, z_move(closure), &options);
 }

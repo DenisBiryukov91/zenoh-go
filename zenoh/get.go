@@ -81,47 +81,67 @@ type GetOptions struct {
 	TimeoutMs          uint64                            // The timeout for the query reply in milliseconds. 0 means default query timeout from zenoh configuration.
 	AllowedDestination option.Option[Locality]           // Restrict the queryables which receive the query to the ones with compatible AllowedOrigin.
 	AcceptReplies      option.Option[ReplyKeyexpr]       // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The accepted replies for the query.
+	CancellationToken  option.Option[CancellationToken]  // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The cancellation token to interrupt the query.
 }
 
-func (opts *GetOptions) toCOpts(pinner *runtime.Pinner) (C.z_get_options_t, *C.zc_cgo_bytes_data_t, *C.zc_internal_encoding_data_t, *C.zc_cgo_bytes_data_t) {
-	var cOpts C.z_get_options_t
-	C.z_get_options_default(&cOpts)
-	payload := (*C.zc_cgo_bytes_data_t)(nil)
-	encoding := (*C.zc_internal_encoding_data_t)(nil)
-	attachment := (*C.zc_cgo_bytes_data_t)(nil)
+func cGetOptionsDefault() C.zc_cgo_get_options_t {
+	var cOpts C.zc_cgo_get_options_t
+	cOpts.accept_replies = C.zc_reply_keyexpr_t(ReplyKeyexprDefault)
+	cOpts.allowed_destination = C.zc_locality_t(LocalityDefault)
+	cOpts.consolidation.mode = int32(ConsolidationModeAuto)
+	cOpts.is_express = false
+	cOpts.priority = C.z_priority_t(PriorityDefault)
+	cOpts.target = C.z_query_target_t(QueryTargetDefault)
+	cOpts.congestion_control = C.z_congestion_control_t(CongestionControlBlock)
+	cOpts.payload_data = (*C.zc_cgo_bytes_data_t)(nil)
+	cOpts.encoding_data = (*C.zc_internal_encoding_data_t)(nil)
+	cOpts.attachment_data = (*C.zc_cgo_bytes_data_t)(nil)
+	cOpts.cancellation_token = (*C.z_owned_cancellation_token_t)(nil)
+	return cOpts
+}
+
+func (opts *GetOptions) toCOpts(pinner *runtime.Pinner) C.zc_cgo_get_options_t {
+	cOpts := cGetOptionsDefault()
+
 	if opts.Payload.IsSome() {
 		cPayloadData := opts.Payload.Unwrap().toCData(pinner)
-		payload = &cPayloadData
+		pinner.Pin(&cPayloadData)
+		cOpts.payload_data = &cPayloadData
 	}
 	if opts.Attachement.IsSome() {
 		cAttachmentData := opts.Attachement.Unwrap().toCData(pinner)
-		attachment = &cAttachmentData
+		pinner.Pin(&cAttachmentData)
+		cOpts.attachment_data = &cAttachmentData
 	}
 	if opts.Encoding.IsSome() {
 		cEncoding := opts.Encoding.Unwrap().toCData(pinner)
-		encoding = &cEncoding
+		pinner.Pin(&cEncoding)
+		cOpts.encoding_data = &cEncoding
 	}
 	if opts.Priority.IsSome() {
-		cOpts.priority = uint32(C.z_priority_t(opts.Priority.Unwrap()))
+		cOpts.priority = C.z_priority_t(opts.Priority.Unwrap())
 	}
 	if opts.CongestionControl.IsSome() {
-		cOpts.congestion_control = uint32(opts.CongestionControl.Unwrap())
+		cOpts.congestion_control = C.z_congestion_control_t(opts.CongestionControl.Unwrap())
 	}
 	cOpts.is_express = C.bool(opts.IsExpress)
 	if opts.Target.IsSome() {
-		cOpts.target = uint32(opts.Target.Unwrap())
+		cOpts.target = C.z_query_target_t(opts.Target.Unwrap())
 	}
 	if opts.Consolidataion.IsSome() {
 		cOpts.consolidation.mode = int32(opts.Consolidataion.Unwrap().mode)
 	}
 	cOpts.timeout_ms = C.uint64_t(opts.TimeoutMs)
 	if opts.AllowedDestination.IsSome() {
-		cOpts.allowed_destination = uint32(opts.AllowedDestination.Unwrap())
+		cOpts.allowed_destination = C.zc_locality_t(opts.AllowedDestination.Unwrap())
 	}
 	if opts.AcceptReplies.IsSome() {
-		cOpts.accept_replies = uint32(opts.AcceptReplies.Unwrap())
+		cOpts.accept_replies = C.zc_reply_keyexpr_t(opts.AcceptReplies.Unwrap())
 	}
-	return cOpts, payload, encoding, attachment
+	if opts.CancellationToken.IsSome() {
+		cOpts.cancellation_token = opts.CancellationToken.Unwrap().toC(pinner)
+	}
+	return cOpts
 }
 
 //export zenohGetCallbackData
@@ -148,10 +168,10 @@ func (session *Session) Get(keyexpr KeyExpr, parameters string, handler Handler[
 	}
 	res := int8(0)
 	if get_options == nil {
-		res = int8(C.zc_cgo_get(session.session, cKeyexpr, cParams, unsafe.Pointer(closure), nil, nil, nil, nil))
+		res = int8(C.zc_cgo_get(session.session, cKeyexpr, cParams, unsafe.Pointer(closure), nil))
 	} else {
-		cOpts, payload, encoding, attachment := get_options.toCOpts(&pinner)
-		res = int8(C.zc_cgo_get(session.session, cKeyexpr, cParams, unsafe.Pointer(closure), &cOpts, payload, encoding, attachment))
+		cOpts := get_options.toCOpts(&pinner)
+		res = int8(C.zc_cgo_get(session.session, cKeyexpr, cParams, unsafe.Pointer(closure), &cOpts))
 	}
 	pinner.Unpin()
 

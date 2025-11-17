@@ -58,8 +58,35 @@ typedef struct {
   zc_cgo_bytes_data_t attachment;
   const z_timestamp_t *timestamp;
   z_sample_kind_t kind;
-  z_reliability_t reliability; 
+  z_reliability_t reliability;
 } zc_cgo_reply_data_t;
+
+typedef struct zc_cgo_get_options_t {
+  z_query_target_t target;
+  z_query_consolidation_t consolidation;
+  zc_cgo_bytes_data_t *payload_data;
+  zc_internal_encoding_data_t *encoding_data;
+  z_congestion_control_t congestion_control;
+  bool is_express;
+  zc_locality_t allowed_destination;
+  zc_reply_keyexpr_t accept_replies;
+  z_priority_t priority;
+  zc_cgo_bytes_data_t *attachment_data;
+  uint64_t timeout_ms;
+  z_owned_cancellation_token_t *cancellation_token;
+} zc_cgo_get_options_t;
+
+typedef struct zc_cgo_querier_get_options_t {
+  zc_cgo_bytes_data_t *payload_data;
+  zc_internal_encoding_data_t *encoding_data;
+  zc_cgo_bytes_data_t *attachment_data;
+  z_owned_cancellation_token_t *cancellation_token;
+} zc_cgo_querier_get_options_t;
+
+typedef struct zc_cgo_liveliness_get_options_t {
+  uint64_t timeout_ms;
+  z_owned_cancellation_token_t *cancellation_token;
+} zc_cgo_liveliness_get_options_t;
 
 zc_cgo_bytes_data_t zc_cgo_bytes_get_data(const z_loaned_bytes_t *bytes);
 zc_cgo_string_data_t zc_cgo_string_get_data(const z_loaned_string_t *s);
@@ -125,17 +152,12 @@ z_result_t zc_cgo_query_reply_del(z_owned_query_t *query,
                                   zc_cgo_bytes_data_t *attachment_data);
 z_result_t zc_cgo_get(z_owned_session_t *session,
                       zc_cgo_string_data_t keyexpr_data, const char *params,
-                      void *context, z_get_options_t *opts,
-                      zc_cgo_bytes_data_t *payload_data,
-                      zc_internal_encoding_data_t *encoding_data,
-                      zc_cgo_bytes_data_t *attachment_data);
+                      void *context, zc_cgo_get_options_t *opts);
 z_result_t zc_cgo_liveliness_get(z_owned_session_t *session,
                                  zc_cgo_string_data_t keyexpr_data,
                                  void *context,
-                                 z_liveliness_get_options_t *opts);
+                                 zc_cgo_liveliness_get_options_t *opts);
 z_result_t zc_cgo_querier_get(z_owned_querier_t *querier, const char *params,
-                              void *context, z_querier_get_options_t *opts,
-                              zc_cgo_bytes_data_t *payload_data,
-                              zc_internal_encoding_data_t *encoding_data,
-                              zc_cgo_bytes_data_t *attachment_data);
+                              void *context,
+                              zc_cgo_querier_get_options_t *opts);
 #endif

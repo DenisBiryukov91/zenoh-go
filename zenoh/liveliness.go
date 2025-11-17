@@ -20,6 +20,8 @@ import "C"
 import (
 	"runtime"
 	"unsafe"
+
+	"github.com/BooleanCat/option"
 )
 
 // [Session] liveliness functionality interface.
@@ -148,13 +150,22 @@ func (liveliness *Liveliness) DeclareBackgroundSubscriber(keyexpr KeyExpr, closu
 
 // Options to pass to [Liveliness.Get] operation.
 type LivelinessGetOptions struct {
-	TimeoutMs uint64 // The timeout for the liveliness query in milliseconds. 0 means default query timeout from zenoh configuration.
+	TimeoutMs         uint64                           // The timeout for the liveliness query in milliseconds. 0 means default query timeout from zenoh configuration.
+	CancellationToken option.Option[CancellationToken] // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The cancellation token to interrupt the query.
 }
 
-func (opts *LivelinessGetOptions) toCOpts(_ *runtime.Pinner) C.z_liveliness_get_options_t {
-	var cOpts C.z_liveliness_get_options_t
-	C.z_liveliness_get_options_default(&cOpts)
+func cLivelinessGetOptionsDefault() C.zc_cgo_liveliness_get_options_t {
+	var cOpts C.zc_cgo_liveliness_get_options_t
+	cOpts.cancellation_token = (*C.z_owned_cancellation_token_t)(nil)
+	return cOpts
+}
+
+func (opts *LivelinessGetOptions) toCOpts(pinner *runtime.Pinner) C.zc_cgo_liveliness_get_options_t {
+	cOpts := cLivelinessGetOptionsDefault()
 	cOpts.timeout_ms = C.uint64_t(opts.TimeoutMs)
+	if opts.CancellationToken.IsSome() {
+		cOpts.cancellation_token = opts.CancellationToken.Unwrap().toC(pinner)
+	}
 	return cOpts
 }
 

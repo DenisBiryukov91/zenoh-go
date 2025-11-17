@@ -104,7 +104,8 @@ func main() {
 						sample.KeyExpr(),
 						sample.Payload())
 				} else {
-					fmt.Println("Received an error")
+					err := reply.Err().Unwrap()
+					fmt.Printf("Received (ERROR: '%s')\n", err.Payload())
 				}
 			}
 

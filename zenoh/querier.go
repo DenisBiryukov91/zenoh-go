@@ -71,31 +71,43 @@ type Querier struct {
 
 // Options passed to [Querier.Get] operation.
 type QuerierGetOptions struct {
-	Payload     option.Option[ZBytes]   // An optional payload to attach to the query.
-	Encoding    option.Option[Encoding] // An optional encoding of the query payload and or attachment.
-	Attachement option.Option[ZBytes]   // The attachment to attach to the query.
+	Payload           option.Option[ZBytes]            // An optional payload to attach to the query.
+	Encoding          option.Option[Encoding]          // An optional encoding of the query payload and or attachment.
+	Attachement       option.Option[ZBytes]            // The attachment to attach to the query.
+	CancellationToken option.Option[CancellationToken] // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The cancellation token to interrupt the query.
 }
 
-func (opts *QuerierGetOptions) toCOpts(pinner *runtime.Pinner) (C.z_querier_get_options_t, *C.zc_cgo_bytes_data_t, *C.zc_internal_encoding_data_t, *C.zc_cgo_bytes_data_t) {
-	var cOpts C.z_querier_get_options_t
-	C.z_querier_get_options_default(&cOpts)
-	payload := (*C.zc_cgo_bytes_data_t)(nil)
-	encoding := (*C.zc_internal_encoding_data_t)(nil)
-	attachment := (*C.zc_cgo_bytes_data_t)(nil)
+func cQuerierGetOptionsDefault() C.zc_cgo_querier_get_options_t {
+	var cOpts C.zc_cgo_querier_get_options_t
+	cOpts.payload_data = (*C.zc_cgo_bytes_data_t)(nil)
+	cOpts.encoding_data = (*C.zc_internal_encoding_data_t)(nil)
+	cOpts.attachment_data = (*C.zc_cgo_bytes_data_t)(nil)
+	cOpts.cancellation_token = (*C.z_owned_cancellation_token_t)(nil)
+	return cOpts
+}
+
+func (opts *QuerierGetOptions) toCOpts(pinner *runtime.Pinner) C.zc_cgo_querier_get_options_t {
+	cOpts := cQuerierGetOptionsDefault()
 	if opts.Payload.IsSome() {
 		cPayloadData := opts.Payload.Unwrap().toCData(pinner)
-		payload = &cPayloadData
+		pinner.Pin(&cPayloadData)
+		cOpts.payload_data = &cPayloadData
 	}
 	if opts.Attachement.IsSome() {
 		cAttachmentData := opts.Attachement.Unwrap().toCData(pinner)
-		attachment = &cAttachmentData
+		pinner.Pin(&cAttachmentData)
+		cOpts.attachment_data = &cAttachmentData
 	}
 	if opts.Encoding.IsSome() {
 		cEncoding := opts.Encoding.Unwrap().toCData(pinner)
-		encoding = &cEncoding
+		pinner.Pin(&cEncoding)
+		cOpts.encoding_data = &cEncoding
+	}
+	if opts.CancellationToken.IsSome() {
+		cOpts.cancellation_token = opts.CancellationToken.Unwrap().toC(pinner)
 	}
 
-	return cOpts, payload, encoding, attachment
+	return cOpts
 }
 
 // Get the key expression of the querier.
@@ -142,10 +154,10 @@ func (querier *Querier) Get(parameters string, handler Handler[Reply], get_optio
 	}
 	res := int8(0)
 	if get_options == nil {
-		res = int8(C.zc_cgo_querier_get(querier.querier, cParams, unsafe.Pointer(closure), nil, nil, nil, nil))
+		res = int8(C.zc_cgo_querier_get(querier.querier, cParams, unsafe.Pointer(closure), nil))
 	} else {
-		cOpts, payload, encoding, attachment := get_options.toCOpts(&pinner)
-		res = int8(C.zc_cgo_querier_get(querier.querier, cParams, unsafe.Pointer(closure), &cOpts, payload, encoding, attachment))
+		cOpts := get_options.toCOpts(&pinner)
+		res = int8(C.zc_cgo_querier_get(querier.querier, cParams, unsafe.Pointer(closure), &cOpts))
 	}
 	pinner.Unpin()
 

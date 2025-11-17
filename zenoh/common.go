@@ -116,6 +116,7 @@ const (
 	LocalityAny          Locality    = C.ZC_LOCALITY_ANY           // Any.
 	LocalitySessionLocal Locality    = C.ZC_LOCALITY_SESSION_LOCAL // Only from/to local sessions.
 	LocalityRemote       Reliability = C.ZC_LOCALITY_REMOTE        // Only from/to remote sessions.
+	LocalityDefault      Locality    = LocalityAny
 )
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
@@ -126,4 +127,5 @@ type ReplyKeyexpr int
 const (
 	ReplyKeyexprAny           ReplyKeyexpr = C.ZC_REPLY_KEYEXPR_ANY            // Replies to any key expression queries.
 	ReplyKeyexprMatchingQuery ReplyKeyexpr = C.ZC_REPLY_KEYEXPR_MATCHING_QUERY // Replies only to queries with intersecting key expressions.
+	ReplyKeyexprDefault       ReplyKeyexpr = ReplyKeyexprMatchingQuery
 )
