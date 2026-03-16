@@ -48,6 +48,7 @@ typedef struct {
   bool has_encoding;
   bool has_payload;
   bool has_attachment;
+  z_reply_keyexpr_t accepts_replies;
 } zc_cgo_query_data_t;
 
 typedef struct {
@@ -68,8 +69,8 @@ typedef struct zc_cgo_get_options_t {
   zc_internal_encoding_data_t *encoding_data;
   z_congestion_control_t congestion_control;
   bool is_express;
-  zc_locality_t allowed_destination;
-  zc_reply_keyexpr_t accept_replies;
+  z_locality_t allowed_destination;
+  z_reply_keyexpr_t accept_replies;
   z_priority_t priority;
   zc_cgo_bytes_data_t *attachment_data;
   uint64_t timeout_ms;

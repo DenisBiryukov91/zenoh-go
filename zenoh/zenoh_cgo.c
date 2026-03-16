@@ -70,6 +70,7 @@ zc_cgo_query_data_t zc_cgo_query_get_data(z_loaned_query_t *query) {
     data.has_encoding = true;
     data.encoding = zc_internal_encoding_get_data(encoding);
   }
+  data.accepts_replies = z_query_accepts_replies(query);
   z_view_string_t s;
   z_query_parameters(query, &s);
   data.params = zc_cgo_string_get_data(z_loan(s));

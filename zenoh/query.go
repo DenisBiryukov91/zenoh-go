@@ -25,12 +25,13 @@ import (
 
 // A Zenoh query received by a queryable.
 type Query struct {
-	keyexpr    KeyExpr
-	payload    option.Option[ZBytes]
-	encoding   option.Option[Encoding]
-	attachment option.Option[ZBytes]
-	parameters string
-	query      *C.z_owned_query_t
+	keyexpr        KeyExpr
+	payload        option.Option[ZBytes]
+	encoding       option.Option[Encoding]
+	attachment     option.Option[ZBytes]
+	parameters     string
+	acceptsReplies ReplyKeyexpr
+	query          *C.z_owned_query_t
 }
 
 // Finalizes and destroys the query. This MUST be always called by user once all replies are provided.
@@ -76,6 +77,7 @@ func newQueryFromC(cQueryData C.zc_cgo_query_data_t) Query {
 	if cQueryData.has_encoding {
 		q.encoding = option.Some(newEncodingFromC(cQueryData.encoding))
 	}
+	q.acceptsReplies = ReplyKeyexpr(cQueryData.accepts_replies)
 	q.query = &cQueryData.query
 	return q
 }
@@ -229,4 +231,9 @@ func (query *Query) ReplyErr(payload ZBytes, options *QueryReplyErrOptions) erro
 		return nil
 	}
 	return NewZError(res, "Failed to send reply error")
+}
+
+// Get the query `AcceptReplies` setting of this query, i.e. which replies are accepted by the query originator.
+func (query *Query) AcceptsReplies() ReplyKeyexpr {
+	return query.acceptsReplies
 }

@@ -33,7 +33,7 @@ type QuerierOptions struct {
 	IsExpress          bool                              // If set to ``true``, the querier queries will not be batched. This usually has a positive impact on latency but negative impact on throughput.
 	TimeoutMs          uint64                            // The timeout for the querier queries in milliseconds. 0 means default query timeout from zenoh configuration.
 	AllowedDestination option.Option[Locality]           // Restrict the queryables which receive the querier queries to the ones with compatible AllowedOrigin.
-	AcceptReplies      option.Option[ReplyKeyexpr]       // This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The accepted replies for the querier queries.
+	AcceptReplies      option.Option[ReplyKeyexpr]       // The accepted replies for the querier queries.
 }
 
 func (opts *QuerierOptions) toCOpts(_pinner *runtime.Pinner) C.z_querier_options_t {

@@ -16,7 +16,7 @@ package zenoh
 
 // #include "zenoh.h"
 // #include "zenoh_cgo.h"
-// static const z_consolidation_mode_t CGO_Z_CONSOLIDATION_MODE_DEFAULT = Z_CONSOLIDATION_MODE_DEFAULT;
+// static const z_consolidation_mode_t CGO_Z_CONSOLIDATION_MODE_DEFAULT = Z_CONSOLIDATION_MODE_AUTO;
 // static const z_query_target_t CGO_Z_QUERY_TARGET_DEFAULT = Z_QUERY_TARGET_DEFAULT;
 import "C"
 import (
@@ -80,14 +80,14 @@ type GetOptions struct {
 	IsExpress          bool                              // If set to ``true``, this query will not be batched. This usually has a positive impact on latency but negative impact on throughput.
 	TimeoutMs          uint64                            // The timeout for the query reply in milliseconds. 0 means default query timeout from zenoh configuration.
 	AllowedDestination option.Option[Locality]           // Restrict the queryables which receive the query to the ones with compatible AllowedOrigin.
-	AcceptReplies      option.Option[ReplyKeyexpr]       // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The accepted replies for the query.
+	AcceptReplies      option.Option[ReplyKeyexpr]       // The kind of accepted replies for the query.
 	CancellationToken  option.Option[CancellationToken]  // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The cancellation token to interrupt the query.
 }
 
 func cGetOptionsDefault() C.zc_cgo_get_options_t {
 	var cOpts C.zc_cgo_get_options_t
-	cOpts.accept_replies = C.zc_reply_keyexpr_t(ReplyKeyexprDefault)
-	cOpts.allowed_destination = C.zc_locality_t(LocalityDefault)
+	cOpts.accept_replies = C.z_reply_keyexpr_t(ReplyKeyexprDefault)
+	cOpts.allowed_destination = C.z_locality_t(LocalityDefault)
 	cOpts.consolidation.mode = int32(ConsolidationModeAuto)
 	cOpts.is_express = false
 	cOpts.priority = C.z_priority_t(PriorityDefault)
@@ -133,10 +133,10 @@ func (opts *GetOptions) toCOpts(pinner *runtime.Pinner) C.zc_cgo_get_options_t {
 	}
 	cOpts.timeout_ms = C.uint64_t(opts.TimeoutMs)
 	if opts.AllowedDestination.IsSome() {
-		cOpts.allowed_destination = C.zc_locality_t(opts.AllowedDestination.Unwrap())
+		cOpts.allowed_destination = C.z_locality_t(opts.AllowedDestination.Unwrap())
 	}
 	if opts.AcceptReplies.IsSome() {
-		cOpts.accept_replies = C.zc_reply_keyexpr_t(opts.AcceptReplies.Unwrap())
+		cOpts.accept_replies = C.z_reply_keyexpr_t(opts.AcceptReplies.Unwrap())
 	}
 	if opts.CancellationToken.IsSome() {
 		cOpts.cancellation_token = opts.CancellationToken.Unwrap().toC(pinner)

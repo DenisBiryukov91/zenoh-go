@@ -113,19 +113,29 @@ const (
 type Locality int
 
 const (
-	LocalityAny          Locality    = C.ZC_LOCALITY_ANY           // Any.
-	LocalitySessionLocal Locality    = C.ZC_LOCALITY_SESSION_LOCAL // Only from/to local sessions.
-	LocalityRemote       Reliability = C.ZC_LOCALITY_REMOTE        // Only from/to remote sessions.
+	LocalityAny          Locality    = C.Z_LOCALITY_ANY           // Any.
+	LocalitySessionLocal Locality    = C.Z_LOCALITY_SESSION_LOCAL // Only from/to local sessions.
+	LocalityRemote       Reliability = C.Z_LOCALITY_REMOTE        // Only from/to remote sessions.
 	LocalityDefault      Locality    = LocalityAny
 )
 
-// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
+// The kinds of accepted query replies.
 //
-// Key expressions types to which Queryable should reply to.
+// The queryable may serve glob-like key expressions.
+// E.g., the queryable may be declared with the key expression `foo/*`.
+// At the same time, it may send replies with more specific key expressions, e.g., `foo/bar` or `foo/baz`.
+// This may cause a situation when the queryable receives a query with the key expression `foo/bar`
+// and replies to it with the key expression `foo/baz`.
+// By default, this behavior is not allowed. Calling `z_query_reply` value on a query for `foo/bar` with key expression
+// `foo/baz` will result in an error on the sending side. But if the query is sent with the `accept_replies` flag set
+// to [ReplyKeyexpr.ReplyKeyexprAny] in either [GetOptions] or [QuerierOptions], then the reply with a
+// disjoint key expression will be accepted for this query.
+//
+// The queryable may check wether disjoint replies are allowed for a query with [Query.AcceptsReplies] function.
 type ReplyKeyexpr int
 
 const (
-	ReplyKeyexprAny           ReplyKeyexpr = C.ZC_REPLY_KEYEXPR_ANY            // Replies to any key expression queries.
-	ReplyKeyexprMatchingQuery ReplyKeyexpr = C.ZC_REPLY_KEYEXPR_MATCHING_QUERY // Replies only to queries with intersecting key expressions.
+	ReplyKeyexprAny           ReplyKeyexpr = C.Z_REPLY_KEYEXPR_ANY            // Replies with any key expression.
+	ReplyKeyexprMatchingQuery ReplyKeyexpr = C.Z_REPLY_KEYEXPR_MATCHING_QUERY // Only replies with key expressions matching the query key expression.
 	ReplyKeyexprDefault       ReplyKeyexpr = ReplyKeyexprMatchingQuery
 )
