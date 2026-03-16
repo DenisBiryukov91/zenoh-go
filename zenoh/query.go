@@ -87,8 +87,8 @@ type QueryReplyOptions struct {
 	Encoding          option.Option[Encoding]          // The encoding of the reply payload and/or attachment.
 	Attachement       option.Option[ZBytes]            // The attachment to attach to this reply.
 	TimeStamp         option.Option[TimeStamp]         // The timestamp of the reply.
-	CongestionControl option.Option[CongestionControl] // The congestion control to apply when routing the reply.
-	Priority          option.Option[Priority]          // The priority of the reply.
+	CongestionControl option.Option[CongestionControl] // Deprecated: Congestion control setting is inherited from the query and cannot be overridden by the reply.
+	Priority          option.Option[Priority]          // Deprecated: Priority setting is inherited from the query and cannot be overridden by the reply.
 	IsExpress         bool                             // If set to ``true``, this reply message will not be batched. This usually has a positive impact on latency but negative impact on throughput.
 }
 
@@ -109,12 +109,6 @@ func (opts *QueryReplyOptions) toCOpts(pinner *runtime.Pinner) (C.z_query_reply_
 		var c_timestamp = opts.TimeStamp.Unwrap().timestamp
 		cOpts.timestamp = &c_timestamp
 	}
-	if opts.Priority.IsSome() {
-		cOpts.priority = uint32(C.z_priority_t(opts.Priority.Unwrap()))
-	}
-	if opts.CongestionControl.IsSome() {
-		cOpts.congestion_control = uint32(opts.CongestionControl.Unwrap())
-	}
 	cOpts.is_express = C.bool(opts.IsExpress)
 	return cOpts, encoding, attachment
 }
@@ -123,8 +117,8 @@ func (opts *QueryReplyOptions) toCOpts(pinner *runtime.Pinner) (C.z_query_reply_
 type QueryReplyDelOptions struct {
 	Attachement       option.Option[ZBytes]            // The attachment to attach to this reply.
 	TimeStamp         option.Option[TimeStamp]         // The timestamp of the reply.
-	CongestionControl option.Option[CongestionControl] // The congestion control to apply when routing the reply.
-	Priority          option.Option[Priority]          // The priority of the reply.
+	CongestionControl option.Option[CongestionControl] // Deprecated: Congestion control setting is inherited from the query and cannot be overridden by the reply.
+	Priority          option.Option[Priority]          // Deprecated: Priority setting is inherited from the query and cannot be overridden by the reply.
 	IsExpress         bool                             // If set to ``true``, this reply message will not be batched. This usually has a positive impact on latency but negative impact on throughput.
 }
 
@@ -139,12 +133,6 @@ func (opts *QueryReplyDelOptions) toCOpts(pinner *runtime.Pinner) (C.z_query_rep
 	if opts.TimeStamp.IsSome() {
 		var c_timestamp = opts.TimeStamp.Unwrap().timestamp
 		cOpts.timestamp = &c_timestamp
-	}
-	if opts.Priority.IsSome() {
-		cOpts.priority = uint32(C.z_priority_t(opts.Priority.Unwrap()))
-	}
-	if opts.CongestionControl.IsSome() {
-		cOpts.congestion_control = uint32(opts.CongestionControl.Unwrap())
 	}
 	cOpts.is_express = C.bool(opts.IsExpress)
 	return cOpts, attachment
