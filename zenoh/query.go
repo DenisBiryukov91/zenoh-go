@@ -66,7 +66,7 @@ func (query *Query) Parameters() string {
 
 func newQueryFromC(cQueryData C.zc_cgo_query_data_t) Query {
 	var q Query
-	q.keyexpr = newKeyExprFromC(cQueryData.keyexpr)
+	q.keyexpr = newKeyExprFromCDataPtr(&cQueryData.keyexpr)
 	q.parameters = C.GoStringN(cQueryData.params.str_ptr, C.int(cQueryData.params.len))
 	if cQueryData.has_payload {
 		q.payload = option.Some(newZBytesFromC(cQueryData.payload))
@@ -98,12 +98,11 @@ func (opts *QueryReplyOptions) toCOpts(pinner *runtime.Pinner) (C.z_query_reply_
 	encoding := (*C.zc_internal_encoding_data_t)(nil)
 	attachment := (*C.zc_cgo_bytes_data_t)(nil)
 	if opts.Attachement.IsSome() {
-		cAttachment := opts.Attachement.Unwrap().toCData(pinner)
-		attachment = &cAttachment
+		cAttachment := opts.Attachement.Unwrap().toCDataPtr(pinner)
+		attachment = cAttachment
 	}
 	if opts.Encoding.IsSome() {
-		cEncoding := opts.Encoding.Unwrap().toCData(pinner)
-		encoding = &cEncoding
+		encoding = opts.Encoding.Unwrap().toCDataPtr(pinner)
 	}
 	if opts.TimeStamp.IsSome() {
 		var c_timestamp = opts.TimeStamp.Unwrap().timestamp
@@ -127,8 +126,8 @@ func (opts *QueryReplyDelOptions) toCOpts(pinner *runtime.Pinner) (C.z_query_rep
 	C.z_query_reply_del_options_default(&cOpts)
 	attachment := (*C.zc_cgo_bytes_data_t)(nil)
 	if opts.Attachement.IsSome() {
-		cAttachment := opts.Attachement.Unwrap().toCData(pinner)
-		attachment = &cAttachment
+		cAttachment := opts.Attachement.Unwrap().toCDataPtr(pinner)
+		attachment = cAttachment
 	}
 	if opts.TimeStamp.IsSome() {
 		var c_timestamp = opts.TimeStamp.Unwrap().timestamp
@@ -148,8 +147,7 @@ func (opts *QueryReplyErrOptions) toCOpts(pinner *runtime.Pinner) (C.z_query_rep
 	C.z_query_reply_err_options_default(&cOpts)
 	encoding := (*C.zc_internal_encoding_data_t)(nil)
 	if opts.Encoding.IsSome() {
-		cEncoding := opts.Encoding.Unwrap().toCData(pinner)
-		encoding = &cEncoding
+		encoding = opts.Encoding.Unwrap().toCDataPtr(pinner)
 	}
 	return cOpts, encoding
 }
@@ -162,7 +160,7 @@ func (query *Query) Reply(keyexpr KeyExpr, payload ZBytes, options *QueryReplyOp
 	res := int8(0)
 	pinner := runtime.Pinner{}
 	cKeyexpr := keyexpr.toCData(&pinner)
-	cPayload := payload.toCData(&pinner)
+	cPayload := payload.toCDataPtr(&pinner)
 	if options == nil {
 		res = int8(C.zc_cgo_query_reply(query.query, cKeyexpr, cPayload, nil, nil, nil))
 	} else {
@@ -206,7 +204,7 @@ func (query *Query) ReplyDel(keyexpr KeyExpr, options *QueryReplyDelOptions) err
 func (query *Query) ReplyErr(payload ZBytes, options *QueryReplyErrOptions) error {
 	res := int8(0)
 	pinner := runtime.Pinner{}
-	cPayload := payload.toCData(&pinner)
+	cPayload := payload.toCDataPtr(&pinner)
 	if options == nil {
 		res = int8(C.zc_cgo_query_reply_err(query.query, cPayload, nil, nil))
 	} else {

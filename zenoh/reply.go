@@ -74,7 +74,7 @@ func newReplyFromC(cReplyData C.zc_cgo_reply_data_t) Reply {
 	if cReplyData.is_ok {
 		var s Sample
 		s.payload = newZBytesFromC(cReplyData.payload)
-		s.keyexpr = newKeyExprFromC(cReplyData.keyexpr)
+		s.keyexpr = newKeyExprFromCDataPtr(&cReplyData.keyexpr)
 		s.encoding = newEncodingFromC(cReplyData.encoding)
 		s.kind = SampleKind(cReplyData.kind)
 		s.reliability = Reliability(cReplyData.reliability)

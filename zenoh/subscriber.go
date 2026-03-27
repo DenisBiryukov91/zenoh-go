@@ -20,18 +20,19 @@ import "C"
 import (
 	"runtime"
 	"unsafe"
+	"zenoh-go/zenoh/inner"
 
 	"github.com/BooleanCat/option"
 )
 
 //export zenohSubscriberCallbackData
 func zenohSubscriberCallbackData(sample C.zc_cgo_sample_data_t, context unsafe.Pointer) {
-	(*closureContext[Sample])(context).call(newSampleFromC(sample))
+	(*inner.ClosureContext[Sample])(context).Call(newSampleFromC(sample))
 }
 
 //export zenohSubscriberDrop
 func zenohSubscriberDrop(context unsafe.Pointer) {
-	(*closureContext[Sample])(context).drop()
+	(*inner.ClosureContext[Sample])(context).Drop()
 }
 
 // A Zenoh [subscriber].
@@ -42,6 +43,15 @@ func zenohSubscriberDrop(context unsafe.Pointer) {
 type Subscriber struct {
 	subscriber *C.z_owned_subscriber_t
 	receiver   <-chan Sample
+}
+
+func subscriberFromCPtrAndReceiver(subscriber *C.z_owned_subscriber_t, receiver <-chan Sample) Subscriber {
+	return Subscriber{subscriber: subscriber, receiver: receiver}
+}
+
+//go:linkname subscriberFromUnsafeCPtrAndReceiver
+func subscriberFromUnsafeCPtrAndReceiver(subscriber unsafe.Pointer, receiver <-chan Sample) Subscriber {
+	return Subscriber{subscriber: (*C.z_owned_subscriber_t)(subscriber), receiver: receiver}
 }
 
 // Undeclare and destroy the subscriber.
@@ -66,7 +76,8 @@ func (subscriber *Subscriber) Drop() {
 
 // Get the key expression of the subscriber.
 func (subscriber *Subscriber) KeyExpr() KeyExpr {
-	return newKeyExprFromC(C.zc_cgo_keyexpr_get_data(C.z_subscriber_keyexpr(C.z_subscriber_loan(subscriber.subscriber))))
+	ke := C.zc_cgo_keyexpr_get_data(C.z_subscriber_keyexpr(C.z_subscriber_loan(subscriber.subscriber)))
+	return newKeyExprFromCDataPtr(&ke)
 }
 
 // Options passed to subscriber declaration
@@ -87,18 +98,18 @@ func (opts *SubscriberOptions) toCOpts(_ *runtime.Pinner) C.z_subscriber_options
 // Subscriber MUST be explicitly destroyed using [Subscriber.Undeclare] or [Subscriber.Drop] once it is no longer needed.
 func (session *Session) DeclareSubscriber(keyexpr KeyExpr, handler Handler[Sample], options *SubscriberOptions) (Subscriber, error) {
 	callback, drop, recv := handler.ToCbDropHandler()
-	closure := newClosure(callback, drop)
+	closure := inner.NewClosure(callback, drop)
 	var cClosure C.z_owned_closure_sample_t
 	C.z_closure_sample(&cClosure, (*[0]byte)(C.zenohSubscriberCallback), (*[0]byte)(C.zenohSubscriberDrop), unsafe.Pointer(closure))
 	pinner := runtime.Pinner{}
-	cKeyexpr := keyexpr.toC(&pinner)
+	cKeyexpr := keyexpr.toCPtr(&pinner)
 	res := int8(0)
 	var cSubscriber C.z_owned_subscriber_t
 	if options == nil {
-		res = int8(C.z_declare_subscriber(C.z_session_loan(session.session), &cSubscriber, C.z_view_keyexpr_loan(&cKeyexpr), C.z_closure_sample_move(&cClosure), nil))
+		res = int8(C.z_declare_subscriber(C.z_session_loan(session.session), &cSubscriber, C.z_view_keyexpr_loan(cKeyexpr), C.z_closure_sample_move(&cClosure), nil))
 	} else {
 		cOpts := options.toCOpts(&pinner)
-		res = int8(C.z_declare_subscriber(C.z_session_loan(session.session), &cSubscriber, C.z_view_keyexpr_loan(&cKeyexpr), C.z_closure_sample_move(&cClosure), &cOpts))
+		res = int8(C.z_declare_subscriber(C.z_session_loan(session.session), &cSubscriber, C.z_view_keyexpr_loan(cKeyexpr), C.z_closure_sample_move(&cClosure), &cOpts))
 	}
 	pinner.Unpin()
 
@@ -111,17 +122,17 @@ func (session *Session) DeclareSubscriber(keyexpr KeyExpr, handler Handler[Sampl
 // Construct and declare a background subscriber. Subscriber callback will be called to process the messages,
 // until the corresponding session is closed or dropped.
 func (session *Session) DeclareBackgroundSubscriber(keyexpr KeyExpr, closure Closure[Sample], options *SubscriberOptions) error {
-	subClosure := newClosure(closure.Call, closure.Drop)
+	subClosure := inner.NewClosure(closure.Call, closure.Drop)
 	var cClosure C.z_owned_closure_sample_t
 	C.z_closure_sample(&cClosure, (*[0]byte)(C.zenohSubscriberCallback), (*[0]byte)(C.zenohSubscriberDrop), unsafe.Pointer(subClosure))
 	pinner := runtime.Pinner{}
-	cKeyexpr := keyexpr.toC(&pinner)
+	cKeyexpr := keyexpr.toCPtr(&pinner)
 	res := int8(0)
 	if options == nil {
-		res = int8(C.z_declare_background_subscriber(C.z_session_loan(session.session), C.z_view_keyexpr_loan(&cKeyexpr), C.z_closure_sample_move(&cClosure), nil))
+		res = int8(C.z_declare_background_subscriber(C.z_session_loan(session.session), C.z_view_keyexpr_loan(cKeyexpr), C.z_closure_sample_move(&cClosure), nil))
 	} else {
 		cOpts := options.toCOpts(&pinner)
-		res = int8(C.z_declare_background_subscriber(C.z_session_loan(session.session), C.z_view_keyexpr_loan(&cKeyexpr), C.z_closure_sample_move(&cClosure), &cOpts))
+		res = int8(C.z_declare_background_subscriber(C.z_session_loan(session.session), C.z_view_keyexpr_loan(cKeyexpr), C.z_closure_sample_move(&cClosure), &cOpts))
 	}
 	pinner.Unpin()
 

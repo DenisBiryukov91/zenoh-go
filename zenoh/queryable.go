@@ -20,18 +20,19 @@ import "C"
 import (
 	"runtime"
 	"unsafe"
+	"zenoh-go/zenoh/inner"
 
 	"github.com/BooleanCat/option"
 )
 
 //export zenohQueryableCallbackData
 func zenohQueryableCallbackData(query C.zc_cgo_query_data_t, context unsafe.Pointer) {
-	(*closureContext[Query])(context).call(newQueryFromC(query))
+	(*inner.ClosureContext[Query])(context).Call(newQueryFromC(query))
 }
 
 //export zenohQueryableDrop
 func zenohQueryableDrop(context unsafe.Pointer) {
-	(*closureContext[Query])(context).drop()
+	(*inner.ClosureContext[Query])(context).Drop()
 }
 
 // A Zenoh [queryable]. Responds to queries sent via [Session.Get] with intersecting key expression.
@@ -82,18 +83,18 @@ func (opts *QueryableOptions) toCOpts(_ *runtime.Pinner) C.z_queryable_options_t
 // Queryable MUST be explicitly destroyed using [Queryable.Undeclare] or [Queryable.Drop] once it is no longer needed.
 func (session *Session) DeclareQueryable(keyexpr KeyExpr, handler Handler[Query], options *QueryableOptions) (Queryable, error) {
 	callback, drop, channel := handler.ToCbDropHandler()
-	closure := newClosure(callback, drop)
+	closure := inner.NewClosure(callback, drop)
 	var cClosure C.z_owned_closure_query_t
 	C.z_closure_query(&cClosure, (*[0]byte)(C.zenohQueryableCallback), (*[0]byte)(C.zenohQueryableDrop), unsafe.Pointer(closure))
 	pinner := runtime.Pinner{}
-	cKeyexpr := keyexpr.toC(&pinner)
+	cKeyexpr := keyexpr.toCPtr(&pinner)
 	res := int8(0)
 	var cQueryable C.z_owned_queryable_t
 	if options == nil {
-		res = int8(C.z_declare_queryable(C.z_session_loan(session.session), &cQueryable, C.z_view_keyexpr_loan(&cKeyexpr), C.z_closure_query_move(&cClosure), nil))
+		res = int8(C.z_declare_queryable(C.z_session_loan(session.session), &cQueryable, C.z_view_keyexpr_loan(cKeyexpr), C.z_closure_query_move(&cClosure), nil))
 	} else {
 		cOpts := options.toCOpts(&pinner)
-		res = int8(C.z_declare_queryable(C.z_session_loan(session.session), &cQueryable, C.z_view_keyexpr_loan(&cKeyexpr), C.z_closure_query_move(&cClosure), &cOpts))
+		res = int8(C.z_declare_queryable(C.z_session_loan(session.session), &cQueryable, C.z_view_keyexpr_loan(cKeyexpr), C.z_closure_query_move(&cClosure), &cOpts))
 	}
 	pinner.Unpin()
 
@@ -106,17 +107,17 @@ func (session *Session) DeclareQueryable(keyexpr KeyExpr, handler Handler[Query]
 // Declare a background queryable for a given keyexpr. The queryable callback will be be called
 // to proccess incoming queries until the corresponding session is closed or dropped.
 func (session *Session) DeclareBackgroundQueryable(keyexpr KeyExpr, closure Closure[Query], options *QueryableOptions) error {
-	qClosure := newClosure(closure.Call, closure.Drop)
+	qClosure := inner.NewClosure(closure.Call, closure.Drop)
 	var cClosure C.z_owned_closure_query_t
 	C.z_closure_query(&cClosure, (*[0]byte)(C.zenohQueryableCallback), (*[0]byte)(C.zenohQueryableDrop), unsafe.Pointer(qClosure))
 	pinner := runtime.Pinner{}
-	cKeyexpr := keyexpr.toC(&pinner)
+	cKeyexpr := keyexpr.toCPtr(&pinner)
 	res := int8(0)
 	if options == nil {
-		res = int8(C.z_declare_background_queryable(C.z_session_loan(session.session), C.z_view_keyexpr_loan(&cKeyexpr), C.z_closure_query_move(&cClosure), nil))
+		res = int8(C.z_declare_background_queryable(C.z_session_loan(session.session), C.z_view_keyexpr_loan(cKeyexpr), C.z_closure_query_move(&cClosure), nil))
 	} else {
 		cOpts := options.toCOpts(&pinner)
-		res = int8(C.z_declare_background_queryable(C.z_session_loan(session.session), C.z_view_keyexpr_loan(&cKeyexpr), C.z_closure_query_move(&cClosure), &cOpts))
+		res = int8(C.z_declare_background_queryable(C.z_session_loan(session.session), C.z_view_keyexpr_loan(cKeyexpr), C.z_closure_query_move(&cClosure), &cOpts))
 	}
 	pinner.Unpin()
 
@@ -128,5 +129,6 @@ func (session *Session) DeclareBackgroundQueryable(keyexpr KeyExpr, closure Clos
 
 // Get the key expression of the queryable.
 func (queryable *Queryable) KeyExpr() KeyExpr {
-	return newKeyExprFromC(C.zc_cgo_keyexpr_get_data(C.z_queryable_keyexpr(C.z_queryable_loan(queryable.queryable))))
+	ke := C.zc_cgo_keyexpr_get_data(C.z_queryable_keyexpr(C.z_queryable_loan(queryable.queryable)))
+	return newKeyExprFromCDataPtr(&ke)
 }

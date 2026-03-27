@@ -19,16 +19,19 @@ package zenoh
 // void zenohZIdCallback(const z_id_t* id, void *context);
 // void zenohZIdDrop(void *context);
 import "C"
-import "unsafe"
+import (
+	"unsafe"
+	"zenoh-go/zenoh/inner"
+)
 
 //export zenohZIdCallback
 func zenohZIdCallback(id *C.czid_t, context unsafe.Pointer) {
-	(*closureContext[Id])(context).call(Id{id: *id})
+	(*inner.ClosureContext[Id])(context).Call(Id{id: *id})
 }
 
 //export zenohZIdDrop
 func zenohZIdDrop(context unsafe.Pointer) {
-	(*closureContext[Id])(context).drop()
+	(*inner.ClosureContext[Id])(context).Drop()
 }
 
 // A Zenoh session.
@@ -113,7 +116,7 @@ func (session Session) ZId() Id {
 func (session Session) PeersZId() ([]Id, error) {
 	var ids []Id
 
-	closure := newClosure(func(id Id) { ids = append(ids, id) }, nil)
+	closure := inner.NewClosure(func(id Id) { ids = append(ids, id) }, nil)
 	var cClosure C.z_owned_closure_zid_t
 	C.z_closure_zid(&cClosure, (*[0]byte)(C.zenohZIdCallback), (*[0]byte)(C.zenohZIdDrop), unsafe.Pointer(closure))
 	res := int8(C.z_info_peers_zid(C.z_session_loan(session.session), C.z_closure_zid_move(&cClosure)))
@@ -127,7 +130,7 @@ func (session Session) PeersZId() ([]Id, error) {
 func (session Session) RoutersZId() ([]Id, error) {
 	var ids []Id
 
-	closure := newClosure(func(id Id) { ids = append(ids, id) }, nil)
+	closure := inner.NewClosure(func(id Id) { ids = append(ids, id) }, nil)
 	var cClosure C.z_owned_closure_zid_t
 	C.z_closure_zid(&cClosure, (*[0]byte)(C.zenohZIdCallback), (*[0]byte)(C.zenohZIdDrop), unsafe.Pointer(closure))
 	res := int8(C.z_info_routers_zid(C.z_session_loan(session.session), C.z_closure_zid_move(&cClosure)))
@@ -135,4 +138,8 @@ func (session Session) RoutersZId() ([]Id, error) {
 		return []Id{}, NewZError(res, "Failed to fetch routers Ids")
 	}
 	return ids, nil
+}
+
+func sessionGetInner(session *Session) unsafe.Pointer {
+	return unsafe.Pointer(session.session)
 }

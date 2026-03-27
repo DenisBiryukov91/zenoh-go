@@ -20,6 +20,7 @@ import "C"
 import (
 	"runtime"
 	"unsafe"
+	"zenoh-go/zenoh/inner"
 
 	"github.com/BooleanCat/option"
 )
@@ -72,15 +73,15 @@ func (token *LivelinessToken) Drop() {
 // is achieved, and a DELETE sample if it's lost.
 func (liveliness *Liveliness) DeclareToken(keyexpr KeyExpr, options *LivelinessTokenOptions) (LivelinessToken, error) {
 	pinner := runtime.Pinner{}
-	cKeyexpr := keyexpr.toC(&pinner)
+	cKeyexpr := keyexpr.toCPtr(&pinner)
 
 	var cToken C.z_owned_liveliness_token_t
 	res := int8(0)
 	if options == nil {
-		C.z_liveliness_declare_token(C.z_session_loan(liveliness.session.session), &cToken, C.z_view_keyexpr_loan(&cKeyexpr), nil)
+		C.z_liveliness_declare_token(C.z_session_loan(liveliness.session.session), &cToken, C.z_view_keyexpr_loan(cKeyexpr), nil)
 	} else {
 		cOpts := options.toCOpts(&pinner)
-		C.z_liveliness_declare_token(C.z_session_loan(liveliness.session.session), &cToken, C.z_view_keyexpr_loan(&cKeyexpr), &cOpts)
+		C.z_liveliness_declare_token(C.z_session_loan(liveliness.session.session), &cToken, C.z_view_keyexpr_loan(cKeyexpr), &cOpts)
 	}
 	pinner.Unpin()
 	if res == 0 {
@@ -104,18 +105,18 @@ func (opts *LivelinessSubscriberOptions) toCOpts(_ *runtime.Pinner) C.z_liveline
 // Declares a subscriber on liveliness tokens that intersect `keyexpr`.
 func (liveliness *Liveliness) DeclareSubscriber(keyexpr KeyExpr, handler Handler[Sample], options *LivelinessSubscriberOptions) (Subscriber, error) {
 	callback, drop, channel := handler.ToCbDropHandler()
-	closure := newClosure(callback, drop)
+	closure := inner.NewClosure(callback, drop)
 	var cClosure C.z_owned_closure_sample_t
 	C.z_closure_sample(&cClosure, (*[0]byte)(C.zenohSubscriberCallback), (*[0]byte)(C.zenohSubscriberDrop), unsafe.Pointer(closure))
 	pinner := runtime.Pinner{}
-	cKeyexpr := keyexpr.toC(&pinner)
+	cKeyexpr := keyexpr.toCPtr(&pinner)
 	res := int8(0)
 	var cSubscriber C.z_owned_subscriber_t
 	if options == nil {
-		res = int8(C.z_liveliness_declare_subscriber(C.z_session_loan(liveliness.session.session), &cSubscriber, C.z_view_keyexpr_loan(&cKeyexpr), C.z_closure_sample_move(&cClosure), nil))
+		res = int8(C.z_liveliness_declare_subscriber(C.z_session_loan(liveliness.session.session), &cSubscriber, C.z_view_keyexpr_loan(cKeyexpr), C.z_closure_sample_move(&cClosure), nil))
 	} else {
 		cOpts := options.toCOpts(&pinner)
-		res = int8(C.z_liveliness_declare_subscriber(C.z_session_loan(liveliness.session.session), &cSubscriber, C.z_view_keyexpr_loan(&cKeyexpr), C.z_closure_sample_move(&cClosure), &cOpts))
+		res = int8(C.z_liveliness_declare_subscriber(C.z_session_loan(liveliness.session.session), &cSubscriber, C.z_view_keyexpr_loan(cKeyexpr), C.z_closure_sample_move(&cClosure), &cOpts))
 	}
 	pinner.Unpin()
 
@@ -128,17 +129,17 @@ func (liveliness *Liveliness) DeclareSubscriber(keyexpr KeyExpr, handler Handler
 // Construct and declare a background subscriber on liveliness tokens that intersect `keyexpr`.
 // Subscriber callback will be called to process the messages, until the corresponding session is closed or dropped.
 func (liveliness *Liveliness) DeclareBackgroundSubscriber(keyexpr KeyExpr, closure Closure[Sample], options *LivelinessSubscriberOptions) error {
-	subClosure := newClosure(closure.Call, closure.Drop)
+	subClosure := inner.NewClosure(closure.Call, closure.Drop)
 	var cClosure C.z_owned_closure_sample_t
 	C.z_closure_sample(&cClosure, (*[0]byte)(C.zenohSubscriberCallback), (*[0]byte)(C.zenohSubscriberDrop), unsafe.Pointer(subClosure))
 	pinner := runtime.Pinner{}
-	cKeyexpr := keyexpr.toC(&pinner)
+	cKeyexpr := keyexpr.toCPtr(&pinner)
 	res := int8(0)
 	if options == nil {
-		res = int8(C.z_liveliness_declare_background_subscriber(C.z_session_loan(liveliness.session.session), C.z_view_keyexpr_loan(&cKeyexpr), C.z_closure_sample_move(&cClosure), nil))
+		res = int8(C.z_liveliness_declare_background_subscriber(C.z_session_loan(liveliness.session.session), C.z_view_keyexpr_loan(cKeyexpr), C.z_closure_sample_move(&cClosure), nil))
 	} else {
 		cOpts := options.toCOpts(&pinner)
-		res = int8(C.z_liveliness_declare_background_subscriber(C.z_session_loan(liveliness.session.session), C.z_view_keyexpr_loan(&cKeyexpr), C.z_closure_sample_move(&cClosure), &cOpts))
+		res = int8(C.z_liveliness_declare_background_subscriber(C.z_session_loan(liveliness.session.session), C.z_view_keyexpr_loan(cKeyexpr), C.z_closure_sample_move(&cClosure), &cOpts))
 	}
 	pinner.Unpin()
 
@@ -172,7 +173,7 @@ func (opts *LivelinessGetOptions) toCOpts(pinner *runtime.Pinner) C.zc_cgo_livel
 // Query liveliness tokens currently on the network with a key expression intersecting with `keyexpr`.
 func (liveliness *Liveliness) Get(keyexpr KeyExpr, handler Handler[Reply], options *LivelinessGetOptions) (<-chan Reply, error) {
 	callback, drop, channel := handler.ToCbDropHandler()
-	closure := newClosure(callback, drop)
+	closure := inner.NewClosure(callback, drop)
 	pinner := runtime.Pinner{}
 	cKeyexpr := keyexpr.toCData(&pinner)
 	res := int8(0)

@@ -43,12 +43,11 @@ func (opts *PublisherPutOptions) toCOpts(pinner *runtime.Pinner) (C.z_publisher_
 	encoding := (*C.zc_internal_encoding_data_t)(nil)
 	attachment := (*C.zc_cgo_bytes_data_t)(nil)
 	if opts.Attachement.IsSome() {
-		cAttachment := opts.Attachement.Unwrap().toCData(pinner)
-		attachment = &cAttachment
+		cAttachment := opts.Attachement.Unwrap().toCDataPtr(pinner)
+		attachment = cAttachment
 	}
 	if opts.Encoding.IsSome() {
-		cEncoding := opts.Encoding.Unwrap().toCData(pinner)
-		encoding = &cEncoding
+		encoding = opts.Encoding.Unwrap().toCDataPtr(pinner)
 	}
 	if opts.TimeStamp.IsSome() {
 		var c_timestamp = opts.TimeStamp.Unwrap().timestamp
@@ -90,7 +89,7 @@ func (publisher *Publisher) Drop() {
 // Publish message onto the publisher's key expression.
 func (publisher *Publisher) Put(payload ZBytes, options *PublisherPutOptions) error {
 	pinner := runtime.Pinner{}
-	cPayload := payload.toCData(&pinner)
+	cPayload := payload.toCDataPtr(&pinner)
 	res := int8(0)
 	if options == nil {
 		res = int8(C.zc_cgo_publisher_put(publisher.publisher, cPayload, nil, nil, nil))
@@ -126,7 +125,8 @@ func (publisher *Publisher) Delete(options *PublisherDeleteOptions) error {
 
 // Get the key expression of the publisher.
 func (publisher *Publisher) KeyExpr() KeyExpr {
-	return newKeyExprFromC(C.zc_cgo_keyexpr_get_data(C.z_publisher_keyexpr(C.z_publisher_loan(publisher.publisher))))
+	ke := C.zc_cgo_keyexpr_get_data(C.z_publisher_keyexpr(C.z_publisher_loan(publisher.publisher)))
+	return newKeyExprFromCDataPtr(&ke)
 }
 
 // Options passed to publisher declaration.
@@ -143,9 +143,9 @@ func (opts *PublisherOptions) toCOpts(pinner *runtime.Pinner) C.z_publisher_opti
 	var cOpts C.z_publisher_options_t
 	C.z_publisher_options_default(&cOpts)
 	if opts.Encoding.IsSome() {
-		cEncoding := opts.Encoding.Unwrap().toC()
+		cEncoding := opts.Encoding.Unwrap().toCPtr()
 		pinner.Pin(cEncoding)
-		cOpts.encoding = C.z_encoding_move(&cEncoding)
+		cOpts.encoding = C.z_encoding_move(cEncoding)
 	}
 	if opts.Priority.IsSome() {
 		cOpts.priority = uint32(C.z_priority_t(opts.Priority.Unwrap()))
@@ -171,14 +171,14 @@ func (opts *PublisherOptions) toCOpts(pinner *runtime.Pinner) C.z_publisher_opti
 func (session *Session) DeclarePublisher(keyexpr KeyExpr, options *PublisherOptions) (Publisher, error) {
 	res := int8(0)
 	pinner := runtime.Pinner{}
-	cKeyexpr := keyexpr.toC(&pinner)
+	cKeyexpr := keyexpr.toCPtr(&pinner)
 	var cPublisher C.z_owned_publisher_t
 
 	if options == nil {
-		res = int8(C.z_declare_publisher(C.z_session_loan(session.session), &cPublisher, C.z_view_keyexpr_loan(&cKeyexpr), nil))
+		res = int8(C.z_declare_publisher(C.z_session_loan(session.session), &cPublisher, C.z_view_keyexpr_loan(cKeyexpr), nil))
 	} else {
 		cOpts := options.toCOpts(&pinner)
-		res = int8(C.z_declare_publisher(C.z_session_loan(session.session), &cPublisher, C.z_view_keyexpr_loan(&cKeyexpr), &cOpts))
+		res = int8(C.z_declare_publisher(C.z_session_loan(session.session), &cPublisher, C.z_view_keyexpr_loan(cKeyexpr), &cOpts))
 	}
 	pinner.Unpin()
 	if res == 0 {
@@ -205,12 +205,11 @@ func (opts *PutOptions) toCOpts(pinner *runtime.Pinner) (C.z_put_options_t, *C.z
 	encoding := (*C.zc_internal_encoding_data_t)(nil)
 	attachment := (*C.zc_cgo_bytes_data_t)(nil)
 	if opts.Attachement.IsSome() {
-		cAttachment := opts.Attachement.Unwrap().toCData(pinner)
-		attachment = &cAttachment
+		cAttachment := opts.Attachement.Unwrap().toCDataPtr(pinner)
+		attachment = cAttachment
 	}
 	if opts.Encoding.IsSome() {
-		cEncoding := opts.Encoding.Unwrap().toCData(pinner)
-		encoding = &cEncoding
+		encoding = opts.Encoding.Unwrap().toCDataPtr(pinner)
 	}
 	if opts.TimeStamp.IsSome() {
 		var c_timestamp = opts.TimeStamp.Unwrap().timestamp
@@ -268,7 +267,7 @@ func (opts *DeleteOptions) toCOpts(_ *runtime.Pinner) C.z_delete_options_t {
 // Publish data on specified key expression.
 func (session *Session) Put(keyExpr KeyExpr, payload ZBytes, options *PutOptions) error {
 	pinner := runtime.Pinner{}
-	cPayload := payload.toCData(&pinner)
+	cPayload := payload.toCDataPtr(&pinner)
 	cKeyexpr := keyExpr.toCData(&pinner)
 	res := int8(0)
 	if options == nil {

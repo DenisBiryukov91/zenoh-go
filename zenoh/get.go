@@ -22,6 +22,7 @@ import "C"
 import (
 	"runtime"
 	"unsafe"
+	"zenoh-go/zenoh/inner"
 
 	"github.com/BooleanCat/option"
 )
@@ -104,19 +105,19 @@ func (opts *GetOptions) toCOpts(pinner *runtime.Pinner) C.zc_cgo_get_options_t {
 	cOpts := cGetOptionsDefault()
 
 	if opts.Payload.IsSome() {
-		cPayloadData := opts.Payload.Unwrap().toCData(pinner)
-		pinner.Pin(&cPayloadData)
-		cOpts.payload_data = &cPayloadData
+		cPayloadData := opts.Payload.Unwrap().toCDataPtr(pinner)
+		pinner.Pin(cPayloadData)
+		cOpts.payload_data = cPayloadData
 	}
 	if opts.Attachement.IsSome() {
-		cAttachmentData := opts.Attachement.Unwrap().toCData(pinner)
-		pinner.Pin(&cAttachmentData)
-		cOpts.attachment_data = &cAttachmentData
+		cAttachmentData := opts.Attachement.Unwrap().toCDataPtr(pinner)
+		pinner.Pin(cAttachmentData)
+		cOpts.attachment_data = cAttachmentData
 	}
 	if opts.Encoding.IsSome() {
-		cEncoding := opts.Encoding.Unwrap().toCData(pinner)
-		pinner.Pin(&cEncoding)
-		cOpts.encoding_data = &cEncoding
+		cEncoding := opts.Encoding.Unwrap().toCDataPtr(pinner)
+		pinner.Pin(cEncoding)
+		cOpts.encoding_data = cEncoding
 	}
 	if opts.Priority.IsSome() {
 		cOpts.priority = C.z_priority_t(opts.Priority.Unwrap())
@@ -146,19 +147,19 @@ func (opts *GetOptions) toCOpts(pinner *runtime.Pinner) C.zc_cgo_get_options_t {
 
 //export zenohGetCallbackData
 func zenohGetCallbackData(reply C.zc_cgo_reply_data_t, context unsafe.Pointer) {
-	(*closureContext[Reply])(context).call(newReplyFromC(reply))
+	(*inner.ClosureContext[Reply])(context).Call(newReplyFromC(reply))
 }
 
 //export zenohGetDrop
 func zenohGetDrop(context unsafe.Pointer) {
-	(*closureContext[Reply])(context).drop()
+	(*inner.ClosureContext[Reply])(context).Drop()
 }
 
 // Query data from the matching queryables in the system.
 // Replies are provided through a callback function, if handler is a [Closure], through returned receiver if it is a [RingChannel] or a [FifoChannel].
 func (session *Session) Get(keyexpr KeyExpr, parameters string, handler Handler[Reply], get_options *GetOptions) (<-chan Reply, error) {
 	callback, drop, channel := handler.ToCbDropHandler()
-	closure := newClosure(callback, drop)
+	closure := inner.NewClosure(callback, drop)
 	pinner := runtime.Pinner{}
 	cKeyexpr := keyexpr.toCData(&pinner)
 	cParams := (*C.char)(nil)

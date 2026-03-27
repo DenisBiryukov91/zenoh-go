@@ -12,7 +12,7 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 
-package zenoh_ext
+package zenohext
 
 import (
 	"bytes"

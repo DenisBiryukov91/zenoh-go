@@ -17,7 +17,7 @@ package main
 import (
 	"fmt"
 	"zenoh-go/zenoh"
-	zenoh_ext "zenoh-go/zenoh/ext"
+	"zenoh-go/zenoh/zenohext"
 )
 
 func main() {
@@ -41,16 +41,16 @@ func main() {
 	// slice
 	{
 		input := []int32{1, 2, 3, 4}
-		payload, _ := zenoh_ext.ZSerialize(input)
-		output, _ := zenoh_ext.ZDeserialize[[]int32](payload)
+		payload, _ := zenohext.ZSerialize(input)
+		output, _ := zenohext.ZDeserialize[[]int32](payload)
 		fmt.Printf("Input: %v, Output: %v\n", input, output)
 	}
 
 	// map
 	{
 		input := map[uint64]string{0: "abc", 1: "def"}
-		payload, _ := zenoh_ext.ZSerialize(input)
-		output, _ := zenoh_ext.ZDeserialize[map[uint64]string](payload)
+		payload, _ := zenohext.ZSerialize(input)
+		output, _ := zenohext.ZDeserialize[map[uint64]string](payload)
 		fmt.Printf("Input: %v, Output: %v\n", input, output)
 	}
 
@@ -61,14 +61,14 @@ func main() {
 		i2 := "test"
 		i3 := []int8{1, 2, 3, 4}
 
-		serializer := zenoh_ext.NewZSerializer()
+		serializer := zenohext.NewZSerializer()
 		serializer.Serialize(i1)
 		serializer.Serialize(i2)
 		serializer.Serialize(i3)
 		payload := serializer.Finish()
 
 		// deserialization
-		deserializer := zenoh_ext.NewZDeserializer(payload)
+		deserializer := zenohext.NewZDeserializer(payload)
 		var o1 uint32
 		var o2 string
 		var o3 []int8

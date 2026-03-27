@@ -16,15 +16,15 @@ package zenoh_test
 
 import (
 	"testing"
-	zenoh_ext "zenoh-go/zenoh/ext"
+	"zenoh-go/zenoh/zenohext"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func checkSerDe[T any](t *testing.T, value T) {
-	zbytes, err := zenoh_ext.ZSerialize(value)
+	zbytes, err := zenohext.ZSerialize(value)
 	assert.Equal(t, err, nil)
-	res, err := zenoh_ext.ZDeserialize[T](zbytes)
+	res, err := zenohext.ZDeserialize[T](zbytes)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, value, res)
 }
@@ -60,7 +60,7 @@ type CustomStruct struct {
 	s  string
 }
 
-func (cs CustomStruct) SerializeWithZSerializer(serializer *zenoh_ext.ZSerializer) error {
+func (cs CustomStruct) SerializeWithZSerializer(serializer *zenohext.ZSerializer) error {
 	if err := serializer.Serialize(cs.vd); err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (cs CustomStruct) SerializeWithZSerializer(serializer *zenoh_ext.ZSerialize
 	return serializer.Serialize(cs.s)
 }
 
-func (cs *CustomStruct) DeserializeWithZDeserializer(deserializer *zenoh_ext.ZDeserializer) error {
+func (cs *CustomStruct) DeserializeWithZDeserializer(deserializer *zenohext.ZDeserializer) error {
 	if err := deserializer.Deserialize(&cs.vd); err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func TestCustom(t *testing.T) {
 }
 
 func TestSerializerDeserializer(t *testing.T) {
-	serializer := zenoh_ext.NewZSerializer()
+	serializer := zenohext.NewZSerializer()
 	err := serializer.Serialize(float64(0.5))
 	assert.Equal(t, err, nil)
 	err = serializer.Serialize("test")
@@ -101,7 +101,7 @@ func TestSerializerDeserializer(t *testing.T) {
 	var s string
 	var u uint8
 
-	deserializer := zenoh_ext.NewZDeserializer(data)
+	deserializer := zenohext.NewZDeserializer(data)
 	assert.False(t, deserializer.IsDone())
 
 	err = deserializer.Deserialize(&d)
@@ -126,7 +126,7 @@ type TestTuple struct {
 	_2 string
 }
 
-func (t TestTuple) SerializeWithZSerializer(serializer *zenoh_ext.ZSerializer) error {
+func (t TestTuple) SerializeWithZSerializer(serializer *zenohext.ZSerializer) error {
 	if err := serializer.Serialize(t._0); err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ type TestPair struct {
 	_1 int16
 }
 
-func (t TestPair) SerializeWithZSerializer(serializer *zenoh_ext.ZSerializer) error {
+func (t TestPair) SerializeWithZSerializer(serializer *zenohext.ZSerializer) error {
 	if err := serializer.Serialize(t._0); err != nil {
 		return err
 	}
@@ -149,22 +149,22 @@ func (t TestPair) SerializeWithZSerializer(serializer *zenoh_ext.ZSerializer) er
 }
 
 func TestBinaryFormat(t *testing.T) {
-	data, _ := zenoh_ext.ZSerialize(int32(1234566))
+	data, _ := zenohext.ZSerialize(int32(1234566))
 	assert.Equal(t, data.Bytes(), []byte{134, 214, 18, 0})
 
-	data, _ = zenoh_ext.ZSerialize(int32(-49245))
+	data, _ = zenohext.ZSerialize(int32(-49245))
 	assert.Equal(t, data.Bytes(), []byte{163, 63, 255, 255})
 
-	data, _ = zenoh_ext.ZSerialize("test")
+	data, _ = zenohext.ZSerialize("test")
 	assert.Equal(t, data.Bytes(), []byte{4, 116, 101, 115, 116})
 
-	data, _ = zenoh_ext.ZSerialize(TestTuple{_0: 500, _1: 1234.0, _2: "test"})
+	data, _ = zenohext.ZSerialize(TestTuple{_0: 500, _1: 1234.0, _2: "test"})
 	assert.Equal(t, data.Bytes(), []byte{244, 1, 0, 64, 154, 68, 4, 116, 101, 115, 116})
 
-	data, _ = zenoh_ext.ZSerialize([]TestPair{{_0: "s1", _1: 10}, {_0: "s2", _1: -10000}})
+	data, _ = zenohext.ZSerialize([]TestPair{{_0: "s1", _1: 10}, {_0: "s2", _1: -10000}})
 	assert.Equal(t, data.Bytes(), []byte{2, 2, 115, 49, 10, 0, 2, 115, 50, 240, 216})
 
-	data, _ = zenoh_ext.ZSerialize([]int64{-100, 500, 100000, -20000000})
+	data, _ = zenohext.ZSerialize([]int64{-100, 500, 100000, -20000000})
 	assert.Equal(t, data.Bytes(), []byte{4, 156, 255, 255, 255, 255, 255, 255, 255, 244, 1, 0, 0, 0, 0, 0, 0,
 		160, 134, 1, 0, 0, 0, 0, 0, 0, 211, 206, 254, 255, 255, 255, 255})
 }

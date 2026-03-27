@@ -38,22 +38,31 @@ type KeyExpr struct {
 	keyexpr []byte
 }
 
-func (keyexpr *KeyExpr) toC(pinner *runtime.Pinner) C.z_view_keyexpr_t {
-	pinner.Pin(&keyexpr.keyexpr)
+func (keyexpr *KeyExpr) toCPtr(pinner *runtime.Pinner) *C.z_view_keyexpr_t {
 	var out C.z_view_keyexpr_t
-	pinner.Pin(&keyexpr.keyexpr[0])
+	pinner.Pin(&keyexpr.keyexpr[0]) // keyexpr can not be empty, so this is always safe
 	C.z_view_keyexpr_from_substr_unchecked(&out, (*C.char)(unsafe.Pointer(&keyexpr.keyexpr[0])), C.size_t(len(keyexpr.keyexpr)))
-	return out
+	return &out
+}
+
+//go:linkname keyExprToUnsafeCPtr
+func keyExprToUnsafeCPtr(keyexpr *KeyExpr, pinner *runtime.Pinner) unsafe.Pointer {
+	return unsafe.Pointer(keyexpr.toCPtr(pinner))
 }
 
 func (keyexpr *KeyExpr) toCData(pinner *runtime.Pinner) C.zc_cgo_string_data_t {
-	pinner.Pin(&keyexpr.keyexpr[0])
+	pinner.Pin(&keyexpr.keyexpr[0]) // keyexpr can not be empty, so this is always safe
 	return C.zc_cgo_string_data_t{str_ptr: (*C.char)(unsafe.Pointer(&keyexpr.keyexpr[0])), len: C.size_t(len(keyexpr.keyexpr))}
 }
 
-func newKeyExprFromC(keyexpr C.zc_cgo_string_data_t) KeyExpr {
+func newKeyExprFromCDataPtr(keyexpr *C.zc_cgo_string_data_t) KeyExpr {
 	ke := KeyExpr{keyexpr: C.GoBytes(unsafe.Pointer(keyexpr.str_ptr), C.int(keyexpr.len))}
 	return ke
+}
+
+//go:linkname newKeyExprFromUnsafeCDataPtr
+func newKeyExprFromUnsafeCDataPtr(keyexpr unsafe.Pointer) KeyExpr {
+	return newKeyExprFromCDataPtr((*C.zc_cgo_string_data_t)(keyexpr))
 }
 
 // Construct key expression from string.
@@ -96,9 +105,9 @@ func (keyexpr KeyExpr) String() string {
 // sets defined by “left“ and “right“, “false“ otherwise.
 func (left KeyExpr) Intersects(right KeyExpr) bool {
 	pinner := runtime.Pinner{}
-	cLeft := left.toC(&pinner)
-	cRight := right.toC(&pinner)
-	res := C.z_keyexpr_intersects(C.z_view_keyexpr_loan(&cLeft), C.z_view_keyexpr_loan(&cRight))
+	cLeft := left.toCPtr(&pinner)
+	cRight := right.toCPtr(&pinner)
+	res := C.z_keyexpr_intersects(C.z_view_keyexpr_loan(cLeft), C.z_view_keyexpr_loan(cRight))
 	pinner.Unpin()
 	return bool(res)
 }
@@ -107,9 +116,9 @@ func (left KeyExpr) Intersects(right KeyExpr) bool {
 // defined by “right“, “false“ otherwise.
 func (left KeyExpr) Includes(right KeyExpr) bool {
 	pinner := runtime.Pinner{}
-	cLeft := left.toC(&pinner)
-	cRight := right.toC(&pinner)
-	res := C.z_keyexpr_includes(C.z_view_keyexpr_loan(&cLeft), C.z_view_keyexpr_loan(&cRight))
+	cLeft := left.toCPtr(&pinner)
+	cRight := right.toCPtr(&pinner)
+	res := C.z_keyexpr_includes(C.z_view_keyexpr_loan(cLeft), C.z_view_keyexpr_loan(cRight))
 	pinner.Unpin()
 	return bool(res)
 }

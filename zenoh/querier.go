@@ -20,6 +20,7 @@ import "C"
 import (
 	"runtime"
 	"unsafe"
+	"zenoh-go/zenoh/inner"
 
 	"github.com/BooleanCat/option"
 )
@@ -89,19 +90,19 @@ func cQuerierGetOptionsDefault() C.zc_cgo_querier_get_options_t {
 func (opts *QuerierGetOptions) toCOpts(pinner *runtime.Pinner) C.zc_cgo_querier_get_options_t {
 	cOpts := cQuerierGetOptionsDefault()
 	if opts.Payload.IsSome() {
-		cPayloadData := opts.Payload.Unwrap().toCData(pinner)
-		pinner.Pin(&cPayloadData)
-		cOpts.payload_data = &cPayloadData
+		cPayloadData := opts.Payload.Unwrap().toCDataPtr(pinner)
+		pinner.Pin(cPayloadData)
+		cOpts.payload_data = cPayloadData
 	}
 	if opts.Attachement.IsSome() {
-		cAttachmentData := opts.Attachement.Unwrap().toCData(pinner)
-		pinner.Pin(&cAttachmentData)
-		cOpts.attachment_data = &cAttachmentData
+		cAttachmentData := opts.Attachement.Unwrap().toCDataPtr(pinner)
+		pinner.Pin(cAttachmentData)
+		cOpts.attachment_data = cAttachmentData
 	}
 	if opts.Encoding.IsSome() {
-		cEncoding := opts.Encoding.Unwrap().toCData(pinner)
-		pinner.Pin(&cEncoding)
-		cOpts.encoding_data = &cEncoding
+		cEncoding := opts.Encoding.Unwrap().toCDataPtr(pinner)
+		pinner.Pin(cEncoding)
+		cOpts.encoding_data = cEncoding
 	}
 	if opts.CancellationToken.IsSome() {
 		cOpts.cancellation_token = opts.CancellationToken.Unwrap().toC(pinner)
@@ -112,21 +113,22 @@ func (opts *QuerierGetOptions) toCOpts(pinner *runtime.Pinner) C.zc_cgo_querier_
 
 // Get the key expression of the querier.
 func (querier *Querier) KeyExpr() KeyExpr {
-	return newKeyExprFromC(C.zc_cgo_keyexpr_get_data(C.z_querier_keyexpr(C.z_querier_loan(querier.querier))))
+	ke := C.zc_cgo_keyexpr_get_data(C.z_querier_keyexpr(C.z_querier_loan(querier.querier)))
+	return newKeyExprFromCDataPtr(&ke)
 }
 
 // Construct a querier for the given key expression.
 // Querier MUST be explicitly destroyed using [Querier.Drop] once it is no longer needed.
 func (session *Session) DeclareQuerier(keyexpr KeyExpr, options *QuerierOptions) (Querier, error) {
 	pinner := runtime.Pinner{}
-	cKeyexpr := keyexpr.toC(&pinner)
+	cKeyexpr := keyexpr.toCPtr(&pinner)
 	res := int8(0)
 	var cQuerier C.z_owned_querier_t
 	if options == nil {
-		res = int8(C.z_declare_querier(C.z_session_loan(session.session), &cQuerier, C.z_view_keyexpr_loan(&cKeyexpr), nil))
+		res = int8(C.z_declare_querier(C.z_session_loan(session.session), &cQuerier, C.z_view_keyexpr_loan(cKeyexpr), nil))
 	} else {
 		cOpts := options.toCOpts(&pinner)
-		res = int8(C.z_declare_querier(C.z_session_loan(session.session), &cQuerier, C.z_view_keyexpr_loan(&cKeyexpr), &cOpts))
+		res = int8(C.z_declare_querier(C.z_session_loan(session.session), &cQuerier, C.z_view_keyexpr_loan(cKeyexpr), &cOpts))
 	}
 	pinner.Unpin()
 
@@ -145,7 +147,7 @@ func (querier *Querier) Drop() {
 // Replies are provided through a callback function, if handler is a [Closure], through returned receiver if it is a [RingChannel] or a [FifoChannel].
 func (querier *Querier) Get(parameters string, handler Handler[Reply], get_options *QuerierGetOptions) (<-chan Reply, error) {
 	callback, drop, channel := handler.ToCbDropHandler()
-	closure := newClosure(callback, drop)
+	closure := inner.NewClosure(callback, drop)
 	pinner := runtime.Pinner{}
 	cParams := (*C.char)(nil)
 	if len(parameters) != 0 {

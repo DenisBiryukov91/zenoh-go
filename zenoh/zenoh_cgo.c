@@ -136,13 +136,13 @@ _create_moved_bytes_from_data(const zc_cgo_bytes_data_t *bytes_data,
 }
 
 z_result_t zc_cgo_publisher_put(z_owned_publisher_t *publisher,
-                                zc_cgo_bytes_data_t payload_data,
+                                zc_cgo_bytes_data_t *payload_data,
                                 z_publisher_put_options_t *opts,
                                 zc_internal_encoding_data_t *encoding_data,
                                 zc_cgo_bytes_data_t *attachment_data) {
   z_owned_bytes_t payload, attachment;
   z_owned_encoding_t encoding;
-  z_bytes_copy_from_buf(&payload, payload_data.data, payload_data.len);
+  z_bytes_copy_from_buf(&payload, payload_data->data, payload_data->len);
   if (encoding_data != NULL) {
     opts->encoding = _create_moved_encoding_from_data(encoding_data, &encoding);
   }
@@ -161,12 +161,12 @@ z_result_t zc_cgo_publisher_delete(z_owned_publisher_t *publisher,
 
 z_result_t zc_cgo_put(z_owned_session_t *session,
                       zc_cgo_string_data_t keyexpr_data,
-                      zc_cgo_bytes_data_t payload_data, z_put_options_t *opts,
+                      zc_cgo_bytes_data_t *payload_data, z_put_options_t *opts,
                       zc_internal_encoding_data_t *encoding_data,
                       zc_cgo_bytes_data_t *attachment_data) {
   z_owned_bytes_t payload, attachment;
   z_owned_encoding_t encoding;
-  z_bytes_copy_from_buf(&payload, payload_data.data, payload_data.len);
+  z_bytes_copy_from_buf(&payload, payload_data->data, payload_data->len);
   z_view_keyexpr_t keyexpr;
   z_view_keyexpr_from_substr_unchecked(&keyexpr, keyexpr_data.str_ptr,
                                        keyexpr_data.len);
@@ -191,13 +191,13 @@ z_result_t zc_cgo_delete(z_owned_session_t *session,
 
 z_result_t zc_cgo_query_reply(z_owned_query_t *query,
                               zc_cgo_string_data_t keyexpr_data,
-                              zc_cgo_bytes_data_t payload_data,
+                              zc_cgo_bytes_data_t *payload_data,
                               z_query_reply_options_t *opts,
                               zc_internal_encoding_data_t *encoding_data,
                               zc_cgo_bytes_data_t *attachment_data) {
   z_owned_bytes_t payload, attachment;
   z_owned_encoding_t encoding;
-  z_bytes_copy_from_buf(&payload, payload_data.data, payload_data.len);
+  z_bytes_copy_from_buf(&payload, payload_data->data, payload_data->len);
   z_view_keyexpr_t keyexpr;
   z_view_keyexpr_from_substr_unchecked(&keyexpr, keyexpr_data.str_ptr,
                                        keyexpr_data.len);
@@ -212,12 +212,12 @@ z_result_t zc_cgo_query_reply(z_owned_query_t *query,
 }
 
 z_result_t zc_cgo_query_reply_err(z_owned_query_t *query,
-                                  zc_cgo_bytes_data_t payload_data,
+                                  zc_cgo_bytes_data_t *payload_data,
                                   z_query_reply_err_options_t *opts,
                                   zc_internal_encoding_data_t *encoding_data) {
   z_owned_bytes_t payload;
   z_owned_encoding_t encoding;
-  z_bytes_copy_from_buf(&payload, payload_data.data, payload_data.len);
+  z_bytes_copy_from_buf(&payload, payload_data->data, payload_data->len);
   if (encoding_data != NULL) {
     opts->encoding = _create_moved_encoding_from_data(encoding_data, &encoding);
   }

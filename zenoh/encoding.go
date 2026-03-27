@@ -45,13 +45,13 @@ func NewEncodinFromString(encoding string) Encoding {
 
 // Get string representation of encoding.
 func (encoding *Encoding) String() string {
-	cEncoding := encoding.toC()
+	cEncoding := encoding.toCPtr()
 	var s C.z_owned_string_t
-	C.z_encoding_to_string(C.z_encoding_loan(&cEncoding), &s)
+	C.z_encoding_to_string(C.z_encoding_loan(cEncoding), &s)
 	cStringData := C.zc_cgo_string_get_data(C.z_string_loan(&s))
 	out := C.GoStringN(cStringData.str_ptr, C.int(cStringData.len))
 	C.zc_cgo_string_drop(&s)
-	C.zc_cgo_encoding_drop(&cEncoding)
+	C.zc_cgo_encoding_drop(cEncoding)
 	return out
 }
 
@@ -63,14 +63,14 @@ func (encoding *Encoding) SetSchema(schema string) {
 	if len(schema) == 0 {
 		return
 	}
-	cEncoding := encoding.toC()
+	cEncoding := encoding.toCPtr()
 	schemaData, schemaSize := toDataLen(schema)
-	loanedEncoding := C.z_encoding_loan(&cEncoding)
+	loanedEncoding := C.z_encoding_loan(cEncoding)
 	C.z_encoding_set_schema_from_substr(loanedEncoding, (*C.char)(unsafe.Pointer(&schemaData[0])), C.size_t(schemaSize))
-	*encoding = newEncodingFromOwnedC(&cEncoding)
+	*encoding = newEncodingFromOwnedC(cEncoding)
 }
 
-func (encoding Encoding) toCData(pinner *runtime.Pinner) C.zc_internal_encoding_data_t {
+func (encoding Encoding) toCDataPtr(pinner *runtime.Pinner) *C.zc_internal_encoding_data_t {
 	var encodingData C.zc_internal_encoding_data_t
 	encodingData.id = C.uint16_t(encoding.id)
 	if len(encoding.schema) > 0 {
@@ -78,16 +78,26 @@ func (encoding Encoding) toCData(pinner *runtime.Pinner) C.zc_internal_encoding_
 		encodingData.schema_ptr = (*C.uint8_t)(unsafe.Pointer(&encoding.schema[0]))
 		encodingData.schema_len = C.size_t(len(encoding.schema))
 	}
-	return encodingData
+	return &encodingData
 }
 
-func (encoding Encoding) toC() C.z_owned_encoding_t {
+//go:linkname encodingToUnsafeCDataPtr
+func encodingToUnsafeCDataPtr(encoding Encoding, pinner *runtime.Pinner) unsafe.Pointer {
+	return (unsafe.Pointer)(encoding.toCDataPtr(pinner))
+}
+
+func (encoding Encoding) toCPtr() *C.z_owned_encoding_t {
 	var out C.z_owned_encoding_t
 	pinner := runtime.Pinner{}
-	encodingData := encoding.toCData(&pinner)
-	C.zc_internal_encoding_from_data(&out, encodingData)
+	encodingData := encoding.toCDataPtr(&pinner)
+	C.zc_internal_encoding_from_data(&out, *encodingData)
 	pinner.Unpin()
-	return out
+	return &out
+}
+
+//go:linkname encodingToUnsafeCPtr
+func encodingToUnsafeCPtr(encoding Encoding) unsafe.Pointer {
+	return (unsafe.Pointer)(encoding.toCPtr())
 }
 
 func newEncodingFromC(cEncoding C.zc_internal_encoding_data_t) Encoding {

@@ -22,16 +22,17 @@ import "C"
 import (
 	"fmt"
 	"unsafe"
+	"zenoh-go/zenoh/inner"
 )
 
 //export zenohScoutCallback
 func zenohScoutCallback(hello *C.z_loaned_hello_t, context unsafe.Pointer) {
-	(*closureContext[Hello])(context).call(newHelloFromC(hello))
+	(*inner.ClosureContext[Hello])(context).Call(newHelloFromC(hello))
 }
 
 //export zenohScoutDrop
 func zenohScoutDrop(context unsafe.Pointer) {
-	(*closureContext[Hello])(context).drop()
+	(*inner.ClosureContext[Hello])(context).Drop()
 }
 
 // Enum indicating type of Zenoh entity.
@@ -132,7 +133,7 @@ func (opts *ScoutOptions) toCOpts() C.z_scout_options_t {
 // This function will block if handler returns a nil channel part and will run in the background otherwise.
 func Scout(config Config, handler Handler[Hello], options *ScoutOptions) (<-chan Hello, error) {
 	var callback, drop, channel = handler.ToCbDropHandler()
-	closure := newClosure(callback, drop)
+	closure := inner.NewClosure(callback, drop)
 	var cClosure C.z_owned_closure_hello_t
 	C.z_closure_hello(&cClosure, (*[0]byte)(C.zenohScoutCallback), (*[0]byte)(C.zenohScoutDrop), unsafe.Pointer(closure))
 	cConfig := config.toC()

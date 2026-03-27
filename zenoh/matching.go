@@ -19,6 +19,7 @@ package zenoh
 import "C"
 import (
 	"unsafe"
+	"zenoh-go/zenoh/inner"
 )
 
 // A struct that indicates if there exist Subscribers matching the Publisher's key expression or Queryables matching Querier's key expression and target.
@@ -28,12 +29,12 @@ type MatchingStatus struct {
 
 //export zenohMatchingListenerCallback
 func zenohMatchingListenerCallback(status *C.zc_cgo_const_matching_status, context unsafe.Pointer) {
-	(*closureContext[MatchingStatus])(context).call(MatchingStatus{Matching: bool(status.matching)})
+	(*inner.ClosureContext[MatchingStatus])(context).Call(MatchingStatus{Matching: bool(status.matching)})
 }
 
 //export zenohMatchingListenerDrop
 func zenohMatchingListenerDrop(context unsafe.Pointer) {
-	(*closureContext[MatchingStatus])(context).drop()
+	(*inner.ClosureContext[MatchingStatus])(context).Drop()
 }
 
 // A Zenoh matching listener.
@@ -42,6 +43,15 @@ func zenohMatchingListenerDrop(context unsafe.Pointer) {
 type MatchingListener struct {
 	listener *C.z_owned_matching_listener_t
 	receiver <-chan MatchingStatus
+}
+
+func matchingListenerFromCPtrAndReceiver(listener *C.z_owned_matching_listener_t, receiver <-chan MatchingStatus) MatchingListener {
+	return MatchingListener{listener: listener, receiver: receiver}
+}
+
+//go:linkname matchingListenerFromUnsafeCPtrAndReceiver
+func matchingListenerFromUnsafeCPtrAndReceiver(listener unsafe.Pointer, receiver <-chan MatchingStatus) MatchingListener {
+	return MatchingListener{listener: (*C.z_owned_matching_listener_t)(listener), receiver: receiver}
 }
 
 // Return matching listener's receiver if it was constructed with channel, nil otherwise.
@@ -79,7 +89,7 @@ func (publisher *Publisher) GetMatchingStatus() (MatchingStatus, error) {
 // Matching listener MUST be explicitly destroyed using [MatchingListener.Undeclare] or [MatchingListener.Drop] once it is no longer needed.
 func (publisher *Publisher) DeclareMatchingListener(handler Handler[MatchingStatus]) (MatchingListener, error) {
 	callback, drop, recv := handler.ToCbDropHandler()
-	closure := newClosure(callback, drop)
+	closure := inner.NewClosure(callback, drop)
 	var cClosure C.z_owned_closure_matching_status_t
 	C.z_closure_matching_status(&cClosure, (*[0]byte)(C.zenohMatchingListenerCallback), (*[0]byte)(C.zenohMatchingListenerDrop), unsafe.Pointer(closure))
 
@@ -95,7 +105,7 @@ func (publisher *Publisher) DeclareMatchingListener(handler Handler[MatchingStat
 // Declare a matching listener, registering a callback for notifying subscribers matching with a given publisher.
 // The callback will be run in the background until the corresponding publisher is dropped.
 func (publisher *Publisher) DeclareBackgroundMatchingListener(closure Closure[MatchingStatus]) error {
-	listenerClosure := newClosure(closure.Call, closure.Drop)
+	listenerClosure := inner.NewClosure(closure.Call, closure.Drop)
 	var cClosure C.z_owned_closure_matching_status_t
 	C.z_closure_matching_status(&cClosure, (*[0]byte)(C.zenohMatchingListenerCallback), (*[0]byte)(C.zenohMatchingListenerDrop), unsafe.Pointer(listenerClosure))
 
@@ -122,7 +132,7 @@ func (querier *Querier) GetMatchingStatus() (MatchingStatus, error) {
 // Matching listener MUST be explicitly destroyed using [MatchingListener.Undeclare] or [MatchingListener.Drop] once it is no longer needed.
 func (querier *Querier) DeclareMatchingListener(handler Handler[MatchingStatus]) (MatchingListener, error) {
 	callback, drop, recv := handler.ToCbDropHandler()
-	closure := newClosure(callback, drop)
+	closure := inner.NewClosure(callback, drop)
 	var cClosure C.z_owned_closure_matching_status_t
 	C.z_closure_matching_status(&cClosure, (*[0]byte)(C.zenohMatchingListenerCallback), (*[0]byte)(C.zenohMatchingListenerDrop), unsafe.Pointer(closure))
 
@@ -138,7 +148,7 @@ func (querier *Querier) DeclareMatchingListener(handler Handler[MatchingStatus])
 // Declare a matching listener, registering a callback for notifying queryables matching with a given querier.
 // The callback will be run in the background until the corresponding publisher is dropped.
 func (querier *Querier) DeclareBackgroundMatchingListener(closure Closure[MatchingStatus]) error {
-	listenerClosure := newClosure(closure.Call, closure.Drop)
+	listenerClosure := inner.NewClosure(closure.Call, closure.Drop)
 	var cClosure C.z_owned_closure_matching_status_t
 	C.z_closure_matching_status(&cClosure, (*[0]byte)(C.zenohMatchingListenerCallback), (*[0]byte)(C.zenohMatchingListenerDrop), unsafe.Pointer(listenerClosure))
 

@@ -62,14 +62,19 @@ func (zbytes ZBytes) toC() C.z_owned_bytes_t {
 	return out
 }
 
-func (zbytes ZBytes) toCData(pinner *runtime.Pinner) C.zc_cgo_bytes_data_t {
+func (zbytes ZBytes) toCDataPtr(pinner *runtime.Pinner) *C.zc_cgo_bytes_data_t {
 	var out C.zc_cgo_bytes_data_t
 	if len(zbytes.data) > 0 {
 		pinner.Pin(&zbytes.data[0])
 		out.data = (*C.uint8_t)(unsafe.Pointer(&zbytes.data[0]))
 		out.len = C.size_t(len(zbytes.data))
 	}
-	return out
+	return &out
+}
+
+//go:linkname zbytesToUnsafeCDataPtr
+func zbytesToUnsafeCDataPtr(zbytes ZBytes, pinner *runtime.Pinner) unsafe.Pointer {
+	return unsafe.Pointer(zbytes.toCDataPtr(pinner))
 }
 
 func newZBytesFromC(cZbytes C.zc_cgo_bytes_data_t) ZBytes {

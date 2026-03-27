@@ -12,7 +12,7 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 
-package zenoh
+package inner
 
 // #include <stdint.h>
 import "C"
@@ -21,17 +21,17 @@ import (
 	"runtime/cgo"
 )
 
-type closureContext[T any] struct {
+type ClosureContext[T any] struct {
 	onCall C.uintptr_t
 	onDrop C.uintptr_t
 	pinner C.uintptr_t
 }
 
-func (context *closureContext[T]) call(value T) {
+func (context *ClosureContext[T]) Call(value T) {
 	cgo.Handle(context.onCall).Value().(func(T))(value)
 }
 
-func (context *closureContext[T]) drop() {
+func (context *ClosureContext[T]) Drop() {
 	if C.uintptr_t(context.onDrop) != 0 {
 		cgo.Handle(context.onDrop).Value().(func())()
 		cgo.Handle(context.onDrop).Delete()
@@ -41,8 +41,8 @@ func (context *closureContext[T]) drop() {
 	cgo.Handle(context.pinner).Delete()
 }
 
-func newClosure[T any](callback func(T), drop func()) *closureContext[T] {
-	closure := closureContext[T]{}
+func NewClosure[T any](callback func(T), drop func()) *ClosureContext[T] {
+	closure := ClosureContext[T]{}
 	closure.onCall = C.uintptr_t(cgo.NewHandle(callback))
 	if drop != nil {
 		closure.onDrop = C.uintptr_t(cgo.NewHandle(drop))

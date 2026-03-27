@@ -94,7 +94,7 @@ func (sample *Sample) Reliability() Reliability {
 func newSampleFromC(cSampleData C.zc_cgo_sample_data_t) Sample {
 	var s Sample
 	s.payload = newZBytesFromC(cSampleData.payload)
-	s.keyexpr = newKeyExprFromC(cSampleData.keyexpr)
+	s.keyexpr = newKeyExprFromCDataPtr(&cSampleData.keyexpr)
 	s.encoding = newEncodingFromC(cSampleData.encoding)
 	s.kind = SampleKind(cSampleData.kind)
 	s.reliability = Reliability(cSampleData.reliability)

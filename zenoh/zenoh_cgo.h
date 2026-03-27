@@ -121,9 +121,10 @@ extern void zenohMatchingListenerDrop(void *context);
 typedef const struct z_matching_status_t zc_cgo_const_matching_status;
 extern void zenohMatchingListenerCallback(zc_cgo_const_matching_status *status,
                                           void *context);
+extern void zenohMissListenerDrop(void *context);
 
 z_result_t zc_cgo_publisher_put(z_owned_publisher_t *publisher,
-                                zc_cgo_bytes_data_t payload_data,
+                                zc_cgo_bytes_data_t *payload_data,
                                 z_publisher_put_options_t *opts,
                                 zc_internal_encoding_data_t *encoding_data,
                                 zc_cgo_bytes_data_t *attachment_data);
@@ -131,7 +132,7 @@ z_result_t zc_cgo_publisher_delete(z_owned_publisher_t *publisher,
                                    z_publisher_delete_options_t *opts);
 z_result_t zc_cgo_put(z_owned_session_t *session,
                       zc_cgo_string_data_t keyexpr_data,
-                      zc_cgo_bytes_data_t payload_data, z_put_options_t *opts,
+                      zc_cgo_bytes_data_t *payload_data, z_put_options_t *opts,
                       zc_internal_encoding_data_t *encoding_data,
                       zc_cgo_bytes_data_t *attachment_data);
 z_result_t zc_cgo_delete(z_owned_session_t *session,
@@ -139,12 +140,12 @@ z_result_t zc_cgo_delete(z_owned_session_t *session,
                          z_delete_options_t *opts);
 z_result_t zc_cgo_query_reply(z_owned_query_t *query,
                               zc_cgo_string_data_t keyexpr_data,
-                              zc_cgo_bytes_data_t payload_data,
+                              zc_cgo_bytes_data_t *payload_data,
                               z_query_reply_options_t *opts,
                               zc_internal_encoding_data_t *encoding_data,
                               zc_cgo_bytes_data_t *attachment_data);
 z_result_t zc_cgo_query_reply_err(z_owned_query_t *query,
-                                  zc_cgo_bytes_data_t payload_data,
+                                  zc_cgo_bytes_data_t *payload_data,
                                   z_query_reply_err_options_t *opts,
                                   zc_internal_encoding_data_t *encoding_data);
 z_result_t zc_cgo_query_reply_del(z_owned_query_t *query,
