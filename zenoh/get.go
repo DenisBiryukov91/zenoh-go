@@ -83,64 +83,62 @@ type GetOptions struct {
 	AllowedDestination option.Option[Locality]           // Restrict the queryables which receive the query to the ones with compatible AllowedOrigin.
 	AcceptReplies      option.Option[ReplyKeyexpr]       // The kind of accepted replies for the query.
 	CancellationToken  option.Option[CancellationToken]  // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The cancellation token to interrupt the query.
-}
-
-func cGetOptionsDefault() C.zc_cgo_get_options_t {
-	var cOpts C.zc_cgo_get_options_t
-	cOpts.accept_replies = C.z_reply_keyexpr_t(ReplyKeyexprDefault)
-	cOpts.allowed_destination = C.z_locality_t(LocalityDefault)
-	cOpts.consolidation.mode = int32(ConsolidationModeAuto)
-	cOpts.is_express = false
-	cOpts.priority = C.z_priority_t(PriorityDefault)
-	cOpts.target = C.z_query_target_t(QueryTargetDefault)
-	cOpts.congestion_control = C.z_congestion_control_t(CongestionControlBlock)
-	cOpts.payload_data = (*C.zc_cgo_bytes_data_t)(nil)
-	cOpts.encoding_data = (*C.zc_internal_encoding_data_t)(nil)
-	cOpts.attachment_data = (*C.zc_cgo_bytes_data_t)(nil)
-	cOpts.cancellation_token = (*C.z_owned_cancellation_token_t)(nil)
-	return cOpts
+	SourceInfo         option.Option[SourceInfo]         // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The source info for the query.
 }
 
 func (opts *GetOptions) toCOpts(pinner *runtime.Pinner) C.zc_cgo_get_options_t {
-	cOpts := cGetOptionsDefault()
+	var cOpts C.zc_cgo_get_options_t
 
 	if opts.Payload.IsSome() {
-		cPayloadData := opts.Payload.Unwrap().toCDataPtr(pinner)
-		pinner.Pin(cPayloadData)
-		cOpts.payload_data = cPayloadData
+		opts.Payload.Unwrap().toCData(pinner, &cOpts.payload_data)
+		cOpts.has_payload = true
 	}
 	if opts.Attachement.IsSome() {
-		cAttachmentData := opts.Attachement.Unwrap().toCDataPtr(pinner)
-		pinner.Pin(cAttachmentData)
-		cOpts.attachment_data = cAttachmentData
+		opts.Attachement.Unwrap().toCData(pinner, &cOpts.attachment_data)
+		cOpts.has_attachment = true
 	}
 	if opts.Encoding.IsSome() {
-		cEncoding := opts.Encoding.Unwrap().toCDataPtr(pinner)
-		pinner.Pin(cEncoding)
-		cOpts.encoding_data = cEncoding
+		opts.Encoding.Unwrap().toCData(pinner, &cOpts.encoding_data)
+		cOpts.has_encoding = true
 	}
 	if opts.Priority.IsSome() {
 		cOpts.priority = C.z_priority_t(opts.Priority.Unwrap())
+	} else {
+		cOpts.priority = C.z_priority_t(PriorityDefault)
 	}
 	if opts.CongestionControl.IsSome() {
 		cOpts.congestion_control = C.z_congestion_control_t(opts.CongestionControl.Unwrap())
+	} else {
+		cOpts.congestion_control = C.z_congestion_control_t(CongestionControlBlock)
 	}
 	cOpts.is_express = C.bool(opts.IsExpress)
 	if opts.Target.IsSome() {
 		cOpts.target = C.z_query_target_t(opts.Target.Unwrap())
+	} else {
+		cOpts.target = C.z_query_target_t(QueryTargetDefault)
 	}
 	if opts.Consolidataion.IsSome() {
 		cOpts.consolidation.mode = int32(opts.Consolidataion.Unwrap().mode)
+	} else {
+		cOpts.consolidation.mode = int32(ConsolidationModeAuto)
 	}
 	cOpts.timeout_ms = C.uint64_t(opts.TimeoutMs)
 	if opts.AllowedDestination.IsSome() {
 		cOpts.allowed_destination = C.z_locality_t(opts.AllowedDestination.Unwrap())
+	} else {
+		cOpts.allowed_destination = C.z_locality_t(LocalityDefault)
 	}
 	if opts.AcceptReplies.IsSome() {
 		cOpts.accept_replies = C.z_reply_keyexpr_t(opts.AcceptReplies.Unwrap())
+	} else {
+		cOpts.accept_replies = C.z_reply_keyexpr_t(ReplyKeyexprDefault)
 	}
 	if opts.CancellationToken.IsSome() {
 		cOpts.cancellation_token = opts.CancellationToken.Unwrap().toC(pinner)
+	}
+	if opts.SourceInfo.IsSome() {
+		cOpts.has_source_info = true
+		cOpts.source_info = opts.SourceInfo.Unwrap().sourceInfo
 	}
 	return cOpts
 }

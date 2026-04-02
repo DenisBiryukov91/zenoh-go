@@ -80,6 +80,13 @@ func (subscriber *Subscriber) KeyExpr() KeyExpr {
 	return newKeyExprFromCDataPtr(&ke)
 }
 
+// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
+//
+// Returns the subscriber's entity global ID.
+func (subscriber *Subscriber) Id() EntityGlobalId {
+	return newEntityGlobalIdFromC(C.z_subscriber_id(C.z_subscriber_loan(subscriber.subscriber)))
+}
+
 // Options passed to subscriber declaration
 type SubscriberOptions struct {
 	AllowedOrigin option.Option[Locality] // Restrict the matching publications that will be received by this Subscriber to the ones that have compatible AllowedDestination.

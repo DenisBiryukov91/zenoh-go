@@ -132,3 +132,10 @@ func (queryable *Queryable) KeyExpr() KeyExpr {
 	ke := C.zc_cgo_keyexpr_get_data(C.z_queryable_keyexpr(C.z_queryable_loan(queryable.queryable)))
 	return newKeyExprFromCDataPtr(&ke)
 }
+
+// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
+//
+// Returns the queryable's entity global ID.
+func (queryable *Queryable) Id() EntityGlobalId {
+	return newEntityGlobalIdFromC(C.z_queryable_id(C.z_queryable_loan(queryable.queryable)))
+}

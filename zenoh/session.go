@@ -112,6 +112,13 @@ func (session Session) ZId() Id {
 	return Id{id: C.z_info_zid(C.z_session_loan(session.session))}
 }
 
+// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
+//
+// Returns the session's entity global ID.
+func (session Session) Id() EntityGlobalId {
+	return newEntityGlobalIdFromC(C.z_session_id(C.z_session_loan(session.session)))
+}
+
 // Fetch Zenoh IDs of all connected peers.
 func (session Session) PeersZId() ([]Id, error) {
 	var ids []Id

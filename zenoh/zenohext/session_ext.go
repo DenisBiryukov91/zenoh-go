@@ -14,6 +14,7 @@
 
 package zenohext
 
+// #cgo CFLAGS: -I${SRCDIR}/..
 // #include "zenoh.h"
 import "C"
 
@@ -50,17 +51,20 @@ func encodingToUnsafeCPtr(zenoh.Encoding) unsafe.Pointer
 //go:linkname keyExprToUnsafeCPtr zenoh-go/zenoh.keyExprToUnsafeCPtr
 func keyExprToUnsafeCPtr(*zenoh.KeyExpr, *runtime.Pinner) unsafe.Pointer
 
-//go:linkname zbytesToUnsafeCDataPtr zenoh-go/zenoh.zbytesToUnsafeCDataPtr
-func zbytesToUnsafeCDataPtr(zenoh.ZBytes, *runtime.Pinner) unsafe.Pointer
+//go:linkname zbytesToUnsafeCData zenoh-go/zenoh.zbytesToUnsafeCData
+func zbytesToUnsafeCData(zenoh.ZBytes, *runtime.Pinner, unsafe.Pointer)
 
 //go:linkname newKeyExprFromUnsafeCDataPtr zenoh-go/zenoh.newKeyExprFromUnsafeCDataPtr
 func newKeyExprFromUnsafeCDataPtr(unsafe.Pointer) zenoh.KeyExpr
 
-//go:linkname encodingToUnsafeCDataPtr zenoh-go/zenoh.encodingToUnsafeCDataPtr
-func encodingToUnsafeCDataPtr(zenoh.Encoding, *runtime.Pinner) unsafe.Pointer
+//go:linkname encodingToUnsafeCData zenoh-go/zenoh.encodingToUnsafeCData
+func encodingToUnsafeCData(zenoh.Encoding, *runtime.Pinner, unsafe.Pointer)
 
-//go:linkname timeStampToUnsafeCPtr zenoh-go/zenoh.timeStampToUnsafeCPtr
-func timeStampToUnsafeCPtr(zenoh.TimeStamp) unsafe.Pointer
+//go:linkname timeStampToUnsafeC zenoh-go/zenoh.timeStampToUnsafeC
+func timeStampToUnsafeC(zenoh.TimeStamp, unsafe.Pointer)
+
+//go:linkname sourceInfoToUnsafeC zenoh-go/zenoh.sourceInfoToUnsafeC
+func sourceInfoToUnsafeC(zenoh.SourceInfo, unsafe.Pointer)
 
 //go:linkname matchingListenerFromUnsafeCPtrAndReceiver zenoh-go/zenoh.matchingListenerFromUnsafeCPtrAndReceiver
 func matchingListenerFromUnsafeCPtrAndReceiver(unsafe.Pointer, <-chan zenoh.MatchingStatus) zenoh.MatchingListener
@@ -70,3 +74,6 @@ func subscriberFromUnsafeCPtrAndReceiver(unsafe.Pointer, <-chan zenoh.Sample) ze
 
 //go:linkname newIdFromUnsafeCPtr zenoh-go/zenoh.newIdFromUnsafeCPtr
 func newIdFromUnsafeCPtr(unsafe.Pointer) zenoh.Id
+
+//go:linkname newEntityGlobalIdFromUnsafeCPtr zenoh-go/zenoh.newEntityGlobalIdFromUnsafeCPtr
+func newEntityGlobalIdFromUnsafeCPtr(unsafe.Pointer) zenoh.EntityGlobalId

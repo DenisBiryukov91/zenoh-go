@@ -34,9 +34,10 @@ func dataHandler(sample zenoh.Sample) {
 }
 
 func missHandler(miss zenohext.Miss) {
-	fmt.Printf(">> [Subscriber] Missed %d samples from '%s' !!!\n",
+	fmt.Printf(">> [Subscriber] Missed %d samples from '{%s}/{%d}' !!!\n",
 		miss.Nb,
-		miss.Source.String())
+		miss.Source.ZId(),
+		miss.Source.EntityId())
 }
 
 func kindToStr(kind zenoh.SampleKind) string {

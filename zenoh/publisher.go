@@ -32,28 +32,31 @@ type Publisher struct {
 
 // Options passed to [Publisher.Put] operation.
 type PublisherPutOptions struct {
-	Encoding    option.Option[Encoding]  // The encoding of the publication.
-	Attachement option.Option[ZBytes]    // The attachment to attach to the publication.
-	TimeStamp   option.Option[TimeStamp] // The timestamp of the publication.
+	Encoding    option.Option[Encoding]   // The encoding of the publication.
+	Attachement option.Option[ZBytes]     // The attachment to attach to the publication.
+	TimeStamp   option.Option[TimeStamp]  // The timestamp of the publication.
+	SourceInfo  option.Option[SourceInfo] // Warning: This API has been marked as unstable. The source info for the publication.
 }
 
-func (opts *PublisherPutOptions) toCOpts(pinner *runtime.Pinner) (C.z_publisher_put_options_t, *C.zc_internal_encoding_data_t, *C.zc_cgo_bytes_data_t) {
-	var cOpts C.z_publisher_put_options_t
-	C.z_publisher_put_options_default(&cOpts)
-	encoding := (*C.zc_internal_encoding_data_t)(nil)
-	attachment := (*C.zc_cgo_bytes_data_t)(nil)
+func (opts *PublisherPutOptions) toCOpts(pinner *runtime.Pinner) C.zc_cgo_publisher_put_options_t {
+	var cOpts C.zc_cgo_publisher_put_options_t
 	if opts.Attachement.IsSome() {
-		cAttachment := opts.Attachement.Unwrap().toCDataPtr(pinner)
-		attachment = cAttachment
+		opts.Attachement.Unwrap().toCData(pinner, &cOpts.attachment_data)
+		cOpts.has_attachment = true
 	}
 	if opts.Encoding.IsSome() {
-		encoding = opts.Encoding.Unwrap().toCDataPtr(pinner)
+		opts.Encoding.Unwrap().toCData(pinner, &cOpts.encoding_data)
+		cOpts.has_encoding = true
 	}
 	if opts.TimeStamp.IsSome() {
-		var c_timestamp = opts.TimeStamp.Unwrap().timestamp
-		cOpts.timestamp = &c_timestamp
+		cOpts.has_timestamp = true
+		cOpts.timestamp = opts.TimeStamp.Unwrap().timestamp
 	}
-	return cOpts, encoding, attachment
+	if opts.SourceInfo.IsSome() {
+		cOpts.has_source_info = true
+		cOpts.source_info = opts.SourceInfo.Unwrap().sourceInfo
+	}
+	return cOpts
 }
 
 // Options passed to [Publisher.Delete] operation.
@@ -61,12 +64,11 @@ type PublisherDeleteOptions struct {
 	TimeStamp option.Option[TimeStamp] // The timestamp of the publication.
 }
 
-func (opts *PublisherDeleteOptions) toCOpts(_ *runtime.Pinner) C.z_publisher_delete_options_t {
-	var cOpts C.z_publisher_delete_options_t
-	C.z_publisher_delete_options_default(&cOpts)
+func (opts *PublisherDeleteOptions) toCOpts(_ *runtime.Pinner) C.zc_cgo_publisher_delete_options_t {
+	var cOpts C.zc_cgo_publisher_delete_options_t
 	if opts.TimeStamp.IsSome() {
-		var c_timestamp = opts.TimeStamp.Unwrap().timestamp
-		cOpts.timestamp = &c_timestamp
+		cOpts.has_timestamp = true
+		cOpts.timestamp = opts.TimeStamp.Unwrap().timestamp
 	}
 	return cOpts
 }
@@ -89,13 +91,14 @@ func (publisher *Publisher) Drop() {
 // Publish message onto the publisher's key expression.
 func (publisher *Publisher) Put(payload ZBytes, options *PublisherPutOptions) error {
 	pinner := runtime.Pinner{}
-	cPayload := payload.toCDataPtr(&pinner)
+	var cPayload C.zc_cgo_bytes_data_t
+	payload.toCData(&pinner, &cPayload)
 	res := int8(0)
 	if options == nil {
-		res = int8(C.zc_cgo_publisher_put(publisher.publisher, cPayload, nil, nil, nil))
+		res = int8(C.zc_cgo_publisher_put(publisher.publisher, &cPayload, nil))
 	} else {
-		cOpts, encoding, attachment := options.toCOpts(&pinner)
-		res = int8(C.zc_cgo_publisher_put(publisher.publisher, cPayload, &cOpts, encoding, attachment))
+		cOpts := options.toCOpts(&pinner)
+		res = int8(C.zc_cgo_publisher_put(publisher.publisher, &cPayload, &cOpts))
 	}
 	pinner.Unpin()
 
@@ -127,6 +130,13 @@ func (publisher *Publisher) Delete(options *PublisherDeleteOptions) error {
 func (publisher *Publisher) KeyExpr() KeyExpr {
 	ke := C.zc_cgo_keyexpr_get_data(C.z_publisher_keyexpr(C.z_publisher_loan(publisher.publisher)))
 	return newKeyExprFromCDataPtr(&ke)
+}
+
+// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
+//
+// Returns the publisher's entity global ID.
+func (publisher *Publisher) Id() EntityGlobalId {
+	return newEntityGlobalIdFromC(C.z_publisher_id(C.z_publisher_loan(publisher.publisher)))
 }
 
 // Options passed to publisher declaration.
@@ -197,38 +207,49 @@ type PutOptions struct {
 	IsExpress          bool                             // If set to ``true``, the message will not be batched. This usually has a positive impact on latency but negative impact on throughput.
 	Reliability        option.Option[Reliability]       // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The put operation reliability.
 	AllowedDestination option.Option[Locality]          // Restrict the subscribers which receive the publication to the ones with compatible AllowedOrigin.
+	SourceInfo         option.Option[SourceInfo]        // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The source info for the publication.
 }
 
-func (opts *PutOptions) toCOpts(pinner *runtime.Pinner) (C.z_put_options_t, *C.zc_internal_encoding_data_t, *C.zc_cgo_bytes_data_t) {
-	var cOpts C.z_put_options_t
-	C.z_put_options_default(&cOpts)
-	encoding := (*C.zc_internal_encoding_data_t)(nil)
-	attachment := (*C.zc_cgo_bytes_data_t)(nil)
+func (opts *PutOptions) toCOpts(pinner *runtime.Pinner) C.zc_cgo_put_options_t {
+	var cOpts C.zc_cgo_put_options_t
 	if opts.Attachement.IsSome() {
-		cAttachment := opts.Attachement.Unwrap().toCDataPtr(pinner)
-		attachment = cAttachment
+		opts.Attachement.Unwrap().toCData(pinner, &cOpts.attachment_data)
+		cOpts.has_attachment = true
 	}
 	if opts.Encoding.IsSome() {
-		encoding = opts.Encoding.Unwrap().toCDataPtr(pinner)
+		opts.Encoding.Unwrap().toCData(pinner, &cOpts.encoding_data)
+		cOpts.has_encoding = true
 	}
 	if opts.TimeStamp.IsSome() {
-		var c_timestamp = opts.TimeStamp.Unwrap().timestamp
-		cOpts.timestamp = &c_timestamp
+		cOpts.has_timestamp = true
+		cOpts.timestamp = opts.TimeStamp.Unwrap().timestamp
 	}
 	if opts.Priority.IsSome() {
-		cOpts.priority = uint32(C.z_priority_t(opts.Priority.Unwrap()))
+		cOpts.priority = C.z_priority_t(opts.Priority.Unwrap())
+	} else {
+		cOpts.priority = C.z_priority_t(PriorityDefault)
 	}
 	if opts.CongestionControl.IsSome() {
-		cOpts.congestion_control = uint32(opts.CongestionControl.Unwrap())
+		cOpts.congestion_control = C.z_congestion_control_t(opts.CongestionControl.Unwrap())
+	} else {
+		cOpts.congestion_control = C.z_congestion_control_t(CongestionControlDefault)
 	}
 	if opts.Reliability.IsSome() {
-		cOpts.reliability = uint32(opts.Reliability.Unwrap())
+		cOpts.reliability = C.z_reliability_t(opts.Reliability.Unwrap())
+	} else {
+		cOpts.reliability = C.z_reliability_t(ReliabilityDefault)
 	}
 	if opts.AllowedDestination.IsSome() {
-		cOpts.allowed_destination = uint32(opts.AllowedDestination.Unwrap())
+		cOpts.allowed_destination = C.z_locality_t(opts.AllowedDestination.Unwrap())
+	} else {
+		cOpts.allowed_destination = C.z_locality_t(LocalityDefault)
 	}
 	cOpts.is_express = C.bool(opts.IsExpress)
-	return cOpts, encoding, attachment
+	if opts.SourceInfo.IsSome() {
+		cOpts.has_source_info = true
+		cOpts.source_info = opts.SourceInfo.Unwrap().sourceInfo
+	}
+	return cOpts
 }
 
 // Options passed to [Session.Delete] operation.
@@ -241,24 +262,31 @@ type DeleteOptions struct {
 	AllowedDestination option.Option[Locality]          // Restrict the subscribers which receive the delete message to the ones with compatible AllowedOrigin.
 }
 
-func (opts *DeleteOptions) toCOpts(_ *runtime.Pinner) C.z_delete_options_t {
-	var cOpts C.z_delete_options_t
-	C.z_delete_options_default(&cOpts)
+func (opts *DeleteOptions) toCOpts(_ *runtime.Pinner) C.zc_cgo_delete_options_t {
+	var cOpts C.zc_cgo_delete_options_t
 	if opts.TimeStamp.IsSome() {
-		var c_timestamp = opts.TimeStamp.Unwrap().timestamp
-		cOpts.timestamp = &c_timestamp
+		cOpts.has_timestamp = true
+		cOpts.timestamp = opts.TimeStamp.Unwrap().timestamp
 	}
 	if opts.Priority.IsSome() {
-		cOpts.priority = uint32(C.z_priority_t(opts.Priority.Unwrap()))
+		cOpts.priority = C.z_priority_t(opts.Priority.Unwrap())
+	} else {
+		cOpts.priority = C.z_priority_t(PriorityDefault)
 	}
 	if opts.CongestionControl.IsSome() {
-		cOpts.congestion_control = uint32(opts.CongestionControl.Unwrap())
+		cOpts.congestion_control = C.z_congestion_control_t(opts.CongestionControl.Unwrap())
+	} else {
+		cOpts.congestion_control = C.z_congestion_control_t(CongestionControlDefault)
 	}
 	if opts.Reliability.IsSome() {
-		cOpts.reliability = uint32(opts.Reliability.Unwrap())
+		cOpts.reliability = C.z_reliability_t(opts.Reliability.Unwrap())
+	} else {
+		cOpts.reliability = C.z_reliability_t(ReliabilityDefault)
 	}
 	if opts.AllowedDestination.IsSome() {
-		cOpts.allowed_destination = uint32(opts.AllowedDestination.Unwrap())
+		cOpts.allowed_destination = C.z_locality_t(opts.AllowedDestination.Unwrap())
+	} else {
+		cOpts.allowed_destination = C.z_locality_t(LocalityDefault)
 	}
 	cOpts.is_express = C.bool(opts.IsExpress)
 	return cOpts
@@ -267,14 +295,15 @@ func (opts *DeleteOptions) toCOpts(_ *runtime.Pinner) C.z_delete_options_t {
 // Publish data on specified key expression.
 func (session *Session) Put(keyExpr KeyExpr, payload ZBytes, options *PutOptions) error {
 	pinner := runtime.Pinner{}
-	cPayload := payload.toCDataPtr(&pinner)
+	var cPayload C.zc_cgo_bytes_data_t
+	payload.toCData(&pinner, &cPayload)
 	cKeyexpr := keyExpr.toCData(&pinner)
 	res := int8(0)
 	if options == nil {
-		res = int8(C.zc_cgo_put(session.session, cKeyexpr, cPayload, nil, nil, nil))
+		res = int8(C.zc_cgo_put(session.session, cKeyexpr, &cPayload, nil))
 	} else {
-		cOpts, encoding, attachment := options.toCOpts(&pinner)
-		res = int8(C.zc_cgo_put(session.session, cKeyexpr, cPayload, &cOpts, encoding, attachment))
+		cOpts := options.toCOpts(&pinner)
+		res = int8(C.zc_cgo_put(session.session, cKeyexpr, &cPayload, &cOpts))
 	}
 	pinner.Unpin()
 

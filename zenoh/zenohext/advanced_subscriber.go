@@ -31,7 +31,7 @@ import (
 // A struct that represents missed samples from an advanced publisher.
 type Miss struct {
 	// The source of the missed samples (entity global ID).
-	Source zenoh.Id
+	Source zenoh.EntityGlobalId
 	// The number of missed samples.
 	Nb uint32
 }
@@ -54,9 +54,8 @@ func (listener *SampleMissListener) Drop() {
 
 //export zenohMissListenerCallback
 func zenohMissListenerCallback(miss *C.zc_cgo_const_miss_t, context unsafe.Pointer) {
-	cId := C.z_entity_global_id_zid(&miss.source)
 	m := Miss{
-		Source: newIdFromUnsafeCPtr(unsafe.Pointer(&cId)),
+		Source: newEntityGlobalIdFromUnsafeCPtr(unsafe.Pointer(&miss.source)),
 		Nb:     uint32(miss.nb),
 	}
 	(*inner.ClosureContext[Miss])(context).Call(m)
@@ -244,6 +243,14 @@ func (subscriber *AdvancedSubscriber) Handler() <-chan zenoh.Sample {
 func (subscriber *AdvancedSubscriber) KeyExpr() zenoh.KeyExpr {
 	ke := C.zc_cgo_keyexpr_get_data(C.ze_advanced_subscriber_keyexpr(C.ze_advanced_subscriber_loan(subscriber.subscriber)))
 	return newKeyExprFromUnsafeCDataPtr(unsafe.Pointer(&ke))
+}
+
+// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
+//
+// Returns the advanced subscriber's entity global ID.
+func (subscriber *AdvancedSubscriber) Id() zenoh.EntityGlobalId {
+	cId := C.ze_advanced_subscriber_id(C.ze_advanced_subscriber_loan(subscriber.subscriber))
+	return newEntityGlobalIdFromUnsafeCPtr(unsafe.Pointer(&cId))
 }
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.

@@ -70,27 +70,26 @@ func (encoding *Encoding) SetSchema(schema string) {
 	*encoding = newEncodingFromOwnedC(cEncoding)
 }
 
-func (encoding Encoding) toCDataPtr(pinner *runtime.Pinner) *C.zc_internal_encoding_data_t {
-	var encodingData C.zc_internal_encoding_data_t
-	encodingData.id = C.uint16_t(encoding.id)
+func (encoding Encoding) toCData(pinner *runtime.Pinner, out *C.zc_internal_encoding_data_t) {
+	out.id = C.uint16_t(encoding.id)
 	if len(encoding.schema) > 0 {
 		pinner.Pin(&encoding.schema[0])
-		encodingData.schema_ptr = (*C.uint8_t)(unsafe.Pointer(&encoding.schema[0]))
-		encodingData.schema_len = C.size_t(len(encoding.schema))
+		out.schema_ptr = (*C.uint8_t)(unsafe.Pointer(&encoding.schema[0]))
+		out.schema_len = C.size_t(len(encoding.schema))
 	}
-	return &encodingData
 }
 
-//go:linkname encodingToUnsafeCDataPtr
-func encodingToUnsafeCDataPtr(encoding Encoding, pinner *runtime.Pinner) unsafe.Pointer {
-	return (unsafe.Pointer)(encoding.toCDataPtr(pinner))
+//go:linkname encodingToUnsafeCData
+func encodingToUnsafeCData(encoding Encoding, pinner *runtime.Pinner, out unsafe.Pointer) {
+	encoding.toCData(pinner, (*C.zc_internal_encoding_data_t)(out))
 }
 
 func (encoding Encoding) toCPtr() *C.z_owned_encoding_t {
 	var out C.z_owned_encoding_t
 	pinner := runtime.Pinner{}
-	encodingData := encoding.toCDataPtr(&pinner)
-	C.zc_internal_encoding_from_data(&out, *encodingData)
+	var encodingData C.zc_internal_encoding_data_t
+	encoding.toCData(&pinner, &encodingData)
+	C.zc_internal_encoding_from_data(&out, encodingData)
 	pinner.Unpin()
 	return &out
 }

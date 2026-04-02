@@ -76,36 +76,30 @@ type QuerierGetOptions struct {
 	Encoding          option.Option[Encoding]          // An optional encoding of the query payload and or attachment.
 	Attachement       option.Option[ZBytes]            // The attachment to attach to the query.
 	CancellationToken option.Option[CancellationToken] // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The cancellation token to interrupt the query.
-}
-
-func cQuerierGetOptionsDefault() C.zc_cgo_querier_get_options_t {
-	var cOpts C.zc_cgo_querier_get_options_t
-	cOpts.payload_data = (*C.zc_cgo_bytes_data_t)(nil)
-	cOpts.encoding_data = (*C.zc_internal_encoding_data_t)(nil)
-	cOpts.attachment_data = (*C.zc_cgo_bytes_data_t)(nil)
-	cOpts.cancellation_token = (*C.z_owned_cancellation_token_t)(nil)
-	return cOpts
+	SourceInfo        option.Option[SourceInfo]        // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The source info for the query.
 }
 
 func (opts *QuerierGetOptions) toCOpts(pinner *runtime.Pinner) C.zc_cgo_querier_get_options_t {
-	cOpts := cQuerierGetOptionsDefault()
+	var cOpts C.zc_cgo_querier_get_options_t
+
 	if opts.Payload.IsSome() {
-		cPayloadData := opts.Payload.Unwrap().toCDataPtr(pinner)
-		pinner.Pin(cPayloadData)
-		cOpts.payload_data = cPayloadData
+		opts.Payload.Unwrap().toCData(pinner, &cOpts.payload_data)
+		cOpts.has_payload = true
 	}
 	if opts.Attachement.IsSome() {
-		cAttachmentData := opts.Attachement.Unwrap().toCDataPtr(pinner)
-		pinner.Pin(cAttachmentData)
-		cOpts.attachment_data = cAttachmentData
+		opts.Attachement.Unwrap().toCData(pinner, &cOpts.attachment_data)
+		cOpts.has_attachment = true
 	}
 	if opts.Encoding.IsSome() {
-		cEncoding := opts.Encoding.Unwrap().toCDataPtr(pinner)
-		pinner.Pin(cEncoding)
-		cOpts.encoding_data = cEncoding
+		opts.Encoding.Unwrap().toCData(pinner, &cOpts.encoding_data)
+		cOpts.has_encoding = true
 	}
 	if opts.CancellationToken.IsSome() {
 		cOpts.cancellation_token = opts.CancellationToken.Unwrap().toC(pinner)
+	}
+	if opts.SourceInfo.IsSome() {
+		cOpts.has_source_info = true
+		cOpts.source_info = opts.SourceInfo.Unwrap().sourceInfo
 	}
 
 	return cOpts
@@ -115,6 +109,13 @@ func (opts *QuerierGetOptions) toCOpts(pinner *runtime.Pinner) C.zc_cgo_querier_
 func (querier *Querier) KeyExpr() KeyExpr {
 	ke := C.zc_cgo_keyexpr_get_data(C.z_querier_keyexpr(C.z_querier_loan(querier.querier)))
 	return newKeyExprFromCDataPtr(&ke)
+}
+
+// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
+//
+// Returns the querier's entity global ID.
+func (querier *Querier) Id() EntityGlobalId {
+	return newEntityGlobalIdFromC(C.z_querier_id(C.z_querier_loan(querier.querier)))
 }
 
 // Construct a querier for the given key expression.

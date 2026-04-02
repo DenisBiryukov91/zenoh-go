@@ -194,26 +194,31 @@ func (opts *AdvancedPublisherOptions) toCOpts(pinner *runtime.Pinner) C.ze_advan
 //
 // Options passed to [AdvancedPublisher.Put].
 type AdvancedPublisherPutOptions struct {
-	Encoding   option.Option[zenoh.Encoding]  // The encoding of the publication.
-	Attachment option.Option[zenoh.ZBytes]    // The attachment to attach to the publication.
-	TimeStamp  option.Option[zenoh.TimeStamp] // The timestamp of the publication.
+	Encoding   option.Option[zenoh.Encoding]   // The encoding of the publication.
+	Attachment option.Option[zenoh.ZBytes]     // The attachment to attach to the publication.
+	TimeStamp  option.Option[zenoh.TimeStamp]  // The timestamp of the publication.
+	SourceInfo option.Option[zenoh.SourceInfo] // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release. The source info for the publication.
 }
 
-func (opts *AdvancedPublisherPutOptions) toCOpts(pinner *runtime.Pinner) (C.ze_advanced_publisher_put_options_t, *C.zc_internal_encoding_data_t, *C.zc_cgo_bytes_data_t) {
-	var cOpts C.ze_advanced_publisher_put_options_t
-	C.ze_advanced_publisher_put_options_default(&cOpts)
-	encoding := (*C.zc_internal_encoding_data_t)(nil)
-	attachment := (*C.zc_cgo_bytes_data_t)(nil)
+func (opts *AdvancedPublisherPutOptions) toCOpts(pinner *runtime.Pinner) C.zc_cgo_advanced_publisher_put_options_t {
+	var cOpts C.zc_cgo_advanced_publisher_put_options_t
 	if opts.Attachment.IsSome() {
-		attachment = (*C.zc_cgo_bytes_data_t)(zbytesToUnsafeCDataPtr(opts.Attachment.Unwrap(), pinner))
+		cOpts.has_attachment = true
+		zbytesToUnsafeCData(opts.Attachment.Unwrap(), pinner, unsafe.Pointer(&cOpts.attachment_data))
 	}
 	if opts.Encoding.IsSome() {
-		encoding = (*C.zc_internal_encoding_data_t)(encodingToUnsafeCDataPtr(opts.Encoding.Unwrap(), pinner))
+		cOpts.has_encoding = true
+		encodingToUnsafeCData(opts.Encoding.Unwrap(), pinner, unsafe.Pointer(&cOpts.encoding_data))
 	}
 	if opts.TimeStamp.IsSome() {
-		cOpts.put_options.timestamp = (*C.z_timestamp_t)(timeStampToUnsafeCPtr(opts.TimeStamp.Unwrap()))
+		cOpts.has_timestamp = true
+		timeStampToUnsafeC(opts.TimeStamp.Unwrap(), unsafe.Pointer(&cOpts.timestamp))
 	}
-	return cOpts, encoding, attachment
+	if opts.SourceInfo.IsSome() {
+		cOpts.has_source_info = true
+		sourceInfoToUnsafeC(opts.SourceInfo.Unwrap(), unsafe.Pointer(&cOpts.source_info))
+	}
+	return cOpts
 }
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
@@ -223,11 +228,11 @@ type AdvancedPublisherDeleteOptions struct {
 	TimeStamp option.Option[zenoh.TimeStamp] // The timestamp of the delete message.
 }
 
-func (opts *AdvancedPublisherDeleteOptions) toCOpts(_ *runtime.Pinner) C.ze_advanced_publisher_delete_options_t {
-	var cOpts C.ze_advanced_publisher_delete_options_t
-	C.ze_advanced_publisher_delete_options_default(&cOpts)
+func (opts *AdvancedPublisherDeleteOptions) toCOpts(_ *runtime.Pinner) C.zc_cgo_advanced_publisher_delete_options_t {
+	var cOpts C.zc_cgo_advanced_publisher_delete_options_t
 	if opts.TimeStamp.IsSome() {
-		cOpts.delete_options.timestamp = (*C.z_timestamp_t)(timeStampToUnsafeCPtr(opts.TimeStamp.Unwrap()))
+		cOpts.has_timestamp = true
+		timeStampToUnsafeC(opts.TimeStamp.Unwrap(), unsafe.Pointer(&cOpts.timestamp))
 	}
 	return cOpts
 }
@@ -256,13 +261,14 @@ func (publisher *AdvancedPublisher) Drop() {
 // Publish data onto the advanced publisher's key expression.
 func (publisher *AdvancedPublisher) Put(payload zenoh.ZBytes, options *AdvancedPublisherPutOptions) error {
 	pinner := runtime.Pinner{}
-	cPayload := (*C.zc_cgo_bytes_data_t)(zbytesToUnsafeCDataPtr(payload, &pinner))
+	var cPayload C.zc_cgo_bytes_data_t
+	zbytesToUnsafeCData(payload, &pinner, unsafe.Pointer(&cPayload))
 	res := int8(0)
 	if options == nil {
-		res = int8(C.zc_cgo_advanced_publisher_put(publisher.publisher, cPayload, nil, nil, nil))
+		res = int8(C.zc_cgo_advanced_publisher_put(publisher.publisher, &cPayload, nil))
 	} else {
-		cOpts, encoding, attachment := options.toCOpts(&pinner)
-		res = int8(C.zc_cgo_advanced_publisher_put(publisher.publisher, cPayload, &cOpts, encoding, attachment))
+		cOpts := options.toCOpts(&pinner)
+		res = int8(C.zc_cgo_advanced_publisher_put(publisher.publisher, &cPayload, &cOpts))
 	}
 	pinner.Unpin()
 
@@ -298,6 +304,14 @@ func (publisher *AdvancedPublisher) Delete(options *AdvancedPublisherDeleteOptio
 func (publisher *AdvancedPublisher) KeyExpr() zenoh.KeyExpr {
 	ke := C.zc_cgo_keyexpr_get_data(C.ze_advanced_publisher_keyexpr(C.ze_advanced_publisher_loan(publisher.publisher)))
 	return newKeyExprFromUnsafeCDataPtr((unsafe.Pointer)(&ke))
+}
+
+// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
+//
+// Returns the advanced publisher's entity global ID.
+func (publisher *AdvancedPublisher) Id() zenoh.EntityGlobalId {
+	cId := C.ze_advanced_publisher_id(C.ze_advanced_publisher_loan(publisher.publisher))
+	return newEntityGlobalIdFromUnsafeCPtr(unsafe.Pointer(&cId))
 }
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.

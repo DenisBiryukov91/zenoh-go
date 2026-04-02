@@ -37,6 +37,7 @@ type Sample struct {
 	qos         qos
 	attachment  option.Option[ZBytes]
 	reliability Reliability
+	sourceInfo  option.Option[SourceInfo]
 }
 
 // Return the key expression of the sample.
@@ -91,6 +92,14 @@ func (sample *Sample) Reliability() Reliability {
 	return sample.reliability
 }
 
+// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
+//
+// Return the source info of the sample if present. Source info contains the global entity ID of the publisher
+// and the sequence number of the sample.
+func (sample *Sample) SourceInfo() option.Option[SourceInfo] {
+	return sample.sourceInfo
+}
+
 func newSampleFromC(cSampleData C.zc_cgo_sample_data_t) Sample {
 	var s Sample
 	s.payload = newZBytesFromC(cSampleData.payload)
@@ -104,5 +113,6 @@ func newSampleFromC(cSampleData C.zc_cgo_sample_data_t) Sample {
 	if cSampleData.attachment.len != 0 {
 		s.attachment = option.Some(newZBytesFromC(cSampleData.attachment))
 	}
+	s.sourceInfo = newSourceInfoFromCPtr(cSampleData.source_info)
 	return s
 }

@@ -16,16 +16,20 @@
 
 zc_cgo_bytes_data_t zc_cgo_bytes_get_data(const z_loaned_bytes_t *bytes) {
   if (bytes == NULL) {
-    return (zc_cgo_bytes_data_t){.data = NULL, .bytes = NULL, .len = 0};
+    return (zc_cgo_bytes_data_t){.data = NULL, .len = 0};
   }
   z_view_slice_t s;
-  if (z_bytes_get_contiguous_view(bytes, &s) == Z_OK) {
-    return (zc_cgo_bytes_data_t){.data = z_slice_data(z_loan(s)),
-                                 .bytes = NULL,
-                                 .len = z_slice_len(z_loan(s))};
-  } else {
+  if (z_bytes_get_contiguous_view(bytes, &s) ==
+      Z_OK) { // just store a pointer to data and its len
+    size_t len = z_slice_len(z_loan(s));
+    // If len == 0, set data to NULL to distinguish from the non-contiguous case
+    // (where data is z_loaned_bytes_t* and len == 0)
     return (zc_cgo_bytes_data_t){
-        .data = NULL, .bytes = bytes, .len = z_bytes_len(bytes)};
+        .data = len > 0 ? (const void *)z_slice_data(z_loan(s)) : NULL,
+        .len = len};
+  } else { // store a pointer to zbytes and set len 0, the real len can be
+           // obtained by calling z_bytes_len
+    return (zc_cgo_bytes_data_t){.data = (const void *)bytes, .len = 0};
   }
 }
 zc_cgo_string_data_t zc_cgo_string_get_data(const z_loaned_string_t *s) {
@@ -48,7 +52,8 @@ zc_cgo_sample_data_t zc_cgo_sample_get_data(z_loaned_sample_t *sample) {
       .keyexpr = zc_cgo_keyexpr_get_data(z_sample_keyexpr(sample)),
       .timestamp = z_sample_timestamp(sample),
       .kind = z_sample_kind(sample),
-      .reliability = z_sample_reliability(sample)};
+      .reliability = z_sample_reliability(sample),
+      .source_info = z_sample_source_info(sample)};
 }
 
 zc_cgo_query_data_t zc_cgo_query_get_data(z_loaned_query_t *query) {
@@ -74,6 +79,7 @@ zc_cgo_query_data_t zc_cgo_query_get_data(z_loaned_query_t *query) {
   z_view_string_t s;
   z_query_parameters(query, &s);
   data.params = zc_cgo_string_get_data(z_loan(s));
+  data.source_info = z_query_source_info(query);
   z_query_clone(&data.query, query);
   return data;
 }
@@ -89,7 +95,8 @@ zc_cgo_reply_data_t zc_cgo_reply_get_data(z_loaned_reply_t *reply) {
         .keyexpr = zc_cgo_keyexpr_get_data(z_sample_keyexpr(sample)),
         .timestamp = z_sample_timestamp(sample),
         .kind = z_sample_kind(sample),
-        .reliability = z_sample_reliability(sample)};
+        .reliability = z_sample_reliability(sample),
+        .source_info = z_sample_source_info(sample)};
   } else {
     const z_loaned_reply_err_t *err = z_reply_err(reply);
     zc_cgo_reply_data_t out = {0};
@@ -131,112 +138,178 @@ static z_moved_encoding_t *_create_moved_encoding_from_data(
 static z_moved_bytes_t *
 _create_moved_bytes_from_data(const zc_cgo_bytes_data_t *bytes_data,
                               z_owned_bytes_t *dst) {
-  z_bytes_copy_from_buf(dst, bytes_data->data, bytes_data->len);
+  z_bytes_copy_from_buf(dst, (const uint8_t *)bytes_data->data,
+                        bytes_data->len);
   return z_move(*dst);
 }
 
 z_result_t zc_cgo_publisher_put(z_owned_publisher_t *publisher,
                                 zc_cgo_bytes_data_t *payload_data,
-                                z_publisher_put_options_t *opts,
-                                zc_internal_encoding_data_t *encoding_data,
-                                zc_cgo_bytes_data_t *attachment_data) {
+                                zc_cgo_publisher_put_options_t *opts) {
   z_owned_bytes_t payload, attachment;
   z_owned_encoding_t encoding;
-  z_bytes_copy_from_buf(&payload, payload_data->data, payload_data->len);
-  if (encoding_data != NULL) {
-    opts->encoding = _create_moved_encoding_from_data(encoding_data, &encoding);
+  if (opts == NULL) {
+    return z_publisher_put(
+        z_loan(*publisher),
+        _create_moved_bytes_from_data(payload_data, &payload), NULL);
   }
-  if (attachment_data != NULL) {
-    opts->attachment =
-        _create_moved_bytes_from_data(attachment_data, &attachment);
+  z_publisher_put_options_t options;
+  z_publisher_put_options_default(&options);
+  if (opts->has_encoding) {
+    options.encoding =
+        _create_moved_encoding_from_data(&opts->encoding_data, &encoding);
   }
-
-  return z_publisher_put(z_loan(*publisher), z_move(payload), opts);
+  if (opts->has_attachment) {
+    options.attachment =
+        _create_moved_bytes_from_data(&opts->attachment_data, &attachment);
+  }
+  options.timestamp = opts->has_timestamp ? &opts->timestamp : NULL;
+  options.source_info = opts->has_source_info ? &opts->source_info : NULL;
+  return z_publisher_put(z_loan(*publisher),
+                         _create_moved_bytes_from_data(payload_data, &payload),
+                         &options);
 }
 
 z_result_t zc_cgo_publisher_delete(z_owned_publisher_t *publisher,
-                                   z_publisher_delete_options_t *opts) {
-  return z_publisher_delete(z_loan(*publisher), opts);
+                                   zc_cgo_publisher_delete_options_t *opts) {
+  if (opts == NULL) {
+    return z_publisher_delete(z_loan(*publisher), NULL);
+  }
+  z_publisher_delete_options_t options;
+  z_publisher_delete_options_default(&options);
+  if (opts->has_timestamp) {
+    options.timestamp = &opts->timestamp;
+  }
+  return z_publisher_delete(z_loan(*publisher), &options);
 }
 
 z_result_t zc_cgo_put(z_owned_session_t *session,
                       zc_cgo_string_data_t keyexpr_data,
-                      zc_cgo_bytes_data_t *payload_data, z_put_options_t *opts,
-                      zc_internal_encoding_data_t *encoding_data,
-                      zc_cgo_bytes_data_t *attachment_data) {
+                      zc_cgo_bytes_data_t *payload_data,
+                      zc_cgo_put_options_t *opts) {
   z_owned_bytes_t payload, attachment;
   z_owned_encoding_t encoding;
-  z_bytes_copy_from_buf(&payload, payload_data->data, payload_data->len);
   z_view_keyexpr_t keyexpr;
   z_view_keyexpr_from_substr_unchecked(&keyexpr, keyexpr_data.str_ptr,
                                        keyexpr_data.len);
-  if (encoding_data != NULL) {
-    opts->encoding = _create_moved_encoding_from_data(encoding_data, &encoding);
+  if (opts == NULL) {
+    return z_put(z_loan(*session), z_loan(keyexpr),
+                 _create_moved_bytes_from_data(payload_data, &payload), NULL);
   }
-  if (attachment_data != NULL) {
-    opts->attachment =
-        _create_moved_bytes_from_data(attachment_data, &attachment);
+  z_put_options_t options;
+  z_put_options_default(&options);
+  if (opts->has_encoding) {
+    options.encoding =
+        _create_moved_encoding_from_data(&opts->encoding_data, &encoding);
   }
-  return z_put(z_loan(*session), z_loan(keyexpr), z_move(payload), opts);
+  if (opts->has_attachment) {
+    options.attachment =
+        _create_moved_bytes_from_data(&opts->attachment_data, &attachment);
+  }
+  options.congestion_control = opts->congestion_control;
+  options.priority = opts->priority;
+  options.is_express = opts->is_express;
+  options.timestamp = opts->has_timestamp ? &opts->timestamp : NULL;
+  options.reliability = opts->reliability;
+  options.allowed_destination = opts->allowed_destination;
+  options.source_info = opts->has_source_info ? &opts->source_info : NULL;
+  return z_put(z_loan(*session), z_loan(keyexpr),
+               _create_moved_bytes_from_data(payload_data, &payload), &options);
 }
 
 z_result_t zc_cgo_delete(z_owned_session_t *session,
                          zc_cgo_string_data_t keyexpr_data,
-                         z_delete_options_t *opts) {
+                         zc_cgo_delete_options_t *opts) {
   z_view_keyexpr_t keyexpr;
   z_view_keyexpr_from_substr_unchecked(&keyexpr, keyexpr_data.str_ptr,
                                        keyexpr_data.len);
-  return z_delete(z_loan(*session), z_loan(keyexpr), opts);
+  if (opts == NULL) {
+    return z_delete(z_loan(*session), z_loan(keyexpr), NULL);
+  }
+  z_delete_options_t options;
+  z_delete_options_default(&options);
+  options.timestamp = opts->has_timestamp ? &opts->timestamp : NULL;
+  options.allowed_destination = opts->allowed_destination;
+  options.congestion_control = opts->congestion_control;
+  options.priority = opts->priority;
+  options.reliability = opts->reliability;
+  options.is_express = opts->is_express;
+  return z_delete(z_loan(*session), z_loan(keyexpr), &options);
 }
 
 z_result_t zc_cgo_query_reply(z_owned_query_t *query,
                               zc_cgo_string_data_t keyexpr_data,
                               zc_cgo_bytes_data_t *payload_data,
-                              z_query_reply_options_t *opts,
-                              zc_internal_encoding_data_t *encoding_data,
-                              zc_cgo_bytes_data_t *attachment_data) {
+                              zc_cgo_query_reply_options_t *opts) {
   z_owned_bytes_t payload, attachment;
   z_owned_encoding_t encoding;
-  z_bytes_copy_from_buf(&payload, payload_data->data, payload_data->len);
   z_view_keyexpr_t keyexpr;
   z_view_keyexpr_from_substr_unchecked(&keyexpr, keyexpr_data.str_ptr,
                                        keyexpr_data.len);
-  if (encoding_data != NULL) {
-    opts->encoding = _create_moved_encoding_from_data(encoding_data, &encoding);
+  if (opts == NULL) {
+    return z_query_reply(z_loan(*query), z_loan(keyexpr),
+                         _create_moved_bytes_from_data(payload_data, &payload),
+                         NULL);
   }
-  if (attachment_data != NULL) {
-    opts->attachment =
-        _create_moved_bytes_from_data(attachment_data, &attachment);
+  z_query_reply_options_t options;
+  z_query_reply_options_default(&options);
+  if (opts->has_encoding) {
+    options.encoding =
+        _create_moved_encoding_from_data(&opts->encoding_data, &encoding);
   }
-  return z_query_reply(z_loan(*query), z_loan(keyexpr), z_move(payload), opts);
+  if (opts->has_attachment) {
+    options.attachment =
+        _create_moved_bytes_from_data(&opts->attachment_data, &attachment);
+  }
+  options.is_express = opts->is_express;
+  options.timestamp = opts->has_timestamp ? &opts->timestamp : NULL;
+  options.source_info = opts->has_source_info ? &opts->source_info : NULL;
+  return z_query_reply(z_loan(*query), z_loan(keyexpr),
+                       _create_moved_bytes_from_data(payload_data, &payload),
+                       &options);
 }
 
 z_result_t zc_cgo_query_reply_err(z_owned_query_t *query,
                                   zc_cgo_bytes_data_t *payload_data,
-                                  z_query_reply_err_options_t *opts,
-                                  zc_internal_encoding_data_t *encoding_data) {
+                                  zc_cgo_query_reply_err_options_t *opts) {
   z_owned_bytes_t payload;
   z_owned_encoding_t encoding;
-  z_bytes_copy_from_buf(&payload, payload_data->data, payload_data->len);
-  if (encoding_data != NULL) {
-    opts->encoding = _create_moved_encoding_from_data(encoding_data, &encoding);
+  if (opts == NULL) {
+    return z_query_reply_err(
+        z_loan(*query), _create_moved_bytes_from_data(payload_data, &payload),
+        NULL);
   }
-  return z_query_reply_err(z_loan(*query), z_move(payload), opts);
+  z_query_reply_err_options_t options;
+  z_query_reply_err_options_default(&options);
+  if (opts->has_encoding) {
+    options.encoding =
+        _create_moved_encoding_from_data(&opts->encoding_data, &encoding);
+  }
+  return z_query_reply_err(
+      z_loan(*query), _create_moved_bytes_from_data(payload_data, &payload),
+      &options);
 }
 
 z_result_t zc_cgo_query_reply_del(z_owned_query_t *query,
                                   zc_cgo_string_data_t keyexpr_data,
-                                  z_query_reply_del_options_t *opts,
-                                  zc_cgo_bytes_data_t *attachment_data) {
+                                  zc_cgo_query_reply_del_options_t *opts) {
   z_view_keyexpr_t keyexpr;
   z_owned_bytes_t attachment;
   z_view_keyexpr_from_substr_unchecked(&keyexpr, keyexpr_data.str_ptr,
                                        keyexpr_data.len);
-  if (attachment_data != NULL) {
-    opts->attachment =
-        _create_moved_bytes_from_data(attachment_data, &attachment);
+  if (opts == NULL) {
+    return z_query_reply_del(z_loan(*query), z_loan(keyexpr), NULL);
   }
-  return z_query_reply_del(z_loan(*query), z_loan(keyexpr), opts);
+  z_query_reply_del_options_t options;
+  z_query_reply_del_options_default(&options);
+  if (opts->has_attachment) {
+    options.attachment =
+        _create_moved_bytes_from_data(&opts->attachment_data, &attachment);
+  }
+  options.is_express = opts->is_express;
+  options.timestamp = opts->has_timestamp ? &opts->timestamp : NULL;
+  options.source_info = opts->has_source_info ? &opts->source_info : NULL;
+  return z_query_reply_del(z_loan(*query), z_loan(keyexpr), &options);
 }
 
 z_result_t zc_cgo_get(z_owned_session_t *session,
@@ -267,23 +340,24 @@ z_result_t zc_cgo_get(z_owned_session_t *session,
   z_owned_encoding_t encoding;
   z_owned_cancellation_token_t cancellation_token;
 
-  if (opts->payload_data != NULL) {
+  if (opts->has_payload) {
     options.payload =
-        _create_moved_bytes_from_data(opts->payload_data, &payload);
+        _create_moved_bytes_from_data(&opts->payload_data, &payload);
   }
-  if (opts->encoding_data != NULL) {
+  if (opts->has_encoding) {
     options.encoding =
-        _create_moved_encoding_from_data(opts->encoding_data, &encoding);
+        _create_moved_encoding_from_data(&opts->encoding_data, &encoding);
   }
-  if (opts->attachment_data != NULL) {
+  if (opts->has_attachment) {
     options.attachment =
-        _create_moved_bytes_from_data(opts->attachment_data, &attachment);
+        _create_moved_bytes_from_data(&opts->attachment_data, &attachment);
   }
   if (opts->cancellation_token != NULL) {
     z_cancellation_token_clone(&cancellation_token,
                                z_loan(*opts->cancellation_token));
     options.cancellation_token = z_move(cancellation_token);
   }
+  options.source_info = opts->has_source_info ? &opts->source_info : NULL;
   return z_get(z_loan(*session), z_loan(keyexpr), params, z_move(closure),
                &options);
 }
@@ -333,22 +407,23 @@ z_result_t zc_cgo_querier_get(z_owned_querier_t *querier, const char *params,
   z_owned_bytes_t payload, attachment;
   z_owned_encoding_t encoding;
   z_owned_cancellation_token_t cancellation_token;
-  if (opts->payload_data != NULL) {
+  if (opts->has_payload) {
     options.payload =
-        _create_moved_bytes_from_data(opts->payload_data, &payload);
+        _create_moved_bytes_from_data(&opts->payload_data, &payload);
   }
-  if (opts->encoding_data != NULL) {
+  if (opts->has_encoding) {
     options.encoding =
-        _create_moved_encoding_from_data(opts->encoding_data, &encoding);
+        _create_moved_encoding_from_data(&opts->encoding_data, &encoding);
   }
-  if (opts->attachment_data != NULL) {
+  if (opts->has_attachment) {
     options.attachment =
-        _create_moved_bytes_from_data(opts->attachment_data, &attachment);
+        _create_moved_bytes_from_data(&opts->attachment_data, &attachment);
   }
   if (opts->cancellation_token != NULL) {
     z_cancellation_token_clone(&cancellation_token,
                                z_loan(*opts->cancellation_token));
     options.cancellation_token = z_move(cancellation_token);
   }
+  options.source_info = opts->has_source_info ? &opts->source_info : NULL;
   return z_querier_get(z_loan(*querier), params, z_move(closure), &options);
 }

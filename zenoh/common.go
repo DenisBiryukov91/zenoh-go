@@ -83,13 +83,13 @@ type TimeStamp struct {
 	timestamp C.z_timestamp_t
 }
 
-func timeStampToCPtr(timestamp TimeStamp) *C.z_timestamp_t {
-	return &timestamp.timestamp
+func timeStampToC(timestamp TimeStamp, cTimestamp *C.z_timestamp_t) {
+	*cTimestamp = timestamp.timestamp
 }
 
-//go:linkname timeStampToUnsafeCPtr
-func timeStampToUnsafeCPtr(timestamp TimeStamp) unsafe.Pointer {
-	return unsafe.Pointer(&timestamp.timestamp)
+//go:linkname timeStampToUnsafeC
+func timeStampToUnsafeC(timestamp TimeStamp, cTimestamp unsafe.Pointer) {
+	timeStampToC(timestamp, (*C.z_timestamp_t)(cTimestamp))
 }
 
 // Create uhlc timestamp from session id.
@@ -157,3 +157,33 @@ const (
 	ReplyKeyexprMatchingQuery ReplyKeyexpr = C.Z_REPLY_KEYEXPR_MATCHING_QUERY // Only replies with key expressions matching the query key expression.
 	ReplyKeyexprDefault       ReplyKeyexpr = ReplyKeyexprMatchingQuery
 )
+
+// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
+//
+// A Zenoh entity global id. Identifies a Zenoh entity (publisher, subscriber, queryable, etc.) uniquely in the system.
+type EntityGlobalId struct {
+	id C.z_entity_global_id_t
+}
+
+// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
+//
+// Returns the Zenoh ID (session ID) part of the entity global id.
+func (eid EntityGlobalId) ZId() Id {
+	return Id{id: C.z_entity_global_id_zid(&eid.id)}
+}
+
+// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
+//
+// Returns the entity ID part of the entity global id (unique within a session).
+func (eid EntityGlobalId) EntityId() uint32 {
+	return uint32(C.z_entity_global_id_eid(&eid.id))
+}
+
+func newEntityGlobalIdFromC(id C.z_entity_global_id_t) EntityGlobalId {
+	return EntityGlobalId{id: id}
+}
+
+//go:linkname newEntityGlobalIdFromUnsafeCPtr
+func newEntityGlobalIdFromUnsafeCPtr(cId unsafe.Pointer) EntityGlobalId {
+	return newEntityGlobalIdFromC(*(*C.z_entity_global_id_t)(cId))
+}

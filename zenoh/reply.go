@@ -84,6 +84,7 @@ func newReplyFromC(cReplyData C.zc_cgo_reply_data_t) Reply {
 		if cReplyData.attachment.len != 0 {
 			s.attachment = option.Some(newZBytesFromC(cReplyData.attachment))
 		}
+		s.sourceInfo = newSourceInfoFromCPtr(cReplyData.source_info)
 		return &replyOk{value: s}
 	} else {
 		var e ReplyError

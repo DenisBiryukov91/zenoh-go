@@ -22,10 +22,10 @@ typedef struct {
 } zc_cgo_string_data_t;
 
 typedef struct {
-  const uint8_t
-      *data; // will be null if there is more than one slice in z_bytes_t
-  const z_loaned_bytes_t *bytes; // will be null if there is only one slice
-  size_t len;
+  const void *data; // null if empty; z_loaned_bytes_t* if len == 0 && data !=
+                    // NULL (non-contiguous); uint8_t* if len > 0
+  size_t len; // 0 if data is z_loaned_bytes_t * or data is NULL, otherwise the
+              // length of data uint8_t *
 } zc_cgo_bytes_data_t;
 
 typedef struct {
@@ -34,6 +34,7 @@ typedef struct {
   zc_cgo_bytes_data_t payload;
   zc_cgo_bytes_data_t attachment;
   const z_timestamp_t *timestamp;
+  const z_source_info_t *source_info;
   z_sample_kind_t kind;
   z_reliability_t reliability;
 } zc_cgo_sample_data_t;
@@ -45,10 +46,11 @@ typedef struct {
   zc_cgo_bytes_data_t attachment;
   zc_cgo_string_data_t params;
   z_owned_query_t query;
+  const z_source_info_t *source_info;
+  z_reply_keyexpr_t accepts_replies;
   bool has_encoding;
   bool has_payload;
   bool has_attachment;
-  z_reply_keyexpr_t accepts_replies;
 } zc_cgo_query_data_t;
 
 typedef struct {
@@ -60,28 +62,39 @@ typedef struct {
   const z_timestamp_t *timestamp;
   z_sample_kind_t kind;
   z_reliability_t reliability;
+  const z_source_info_t *source_info;
 } zc_cgo_reply_data_t;
 
 typedef struct zc_cgo_get_options_t {
+  zc_cgo_bytes_data_t payload_data;
+  zc_internal_encoding_data_t encoding_data;
+  zc_cgo_bytes_data_t attachment_data;
+  uint64_t timeout_ms;
+  z_owned_cancellation_token_t *cancellation_token;
+  z_source_info_t source_info;
+  z_congestion_control_t congestion_control;
   z_query_target_t target;
   z_query_consolidation_t consolidation;
-  zc_cgo_bytes_data_t *payload_data;
-  zc_internal_encoding_data_t *encoding_data;
-  z_congestion_control_t congestion_control;
-  bool is_express;
   z_locality_t allowed_destination;
   z_reply_keyexpr_t accept_replies;
   z_priority_t priority;
-  zc_cgo_bytes_data_t *attachment_data;
-  uint64_t timeout_ms;
-  z_owned_cancellation_token_t *cancellation_token;
+  bool is_express;
+  bool has_payload;
+  bool has_encoding;
+  bool has_attachment;
+  bool has_source_info;
 } zc_cgo_get_options_t;
 
 typedef struct zc_cgo_querier_get_options_t {
-  zc_cgo_bytes_data_t *payload_data;
-  zc_internal_encoding_data_t *encoding_data;
-  zc_cgo_bytes_data_t *attachment_data;
+  zc_cgo_bytes_data_t payload_data;
+  zc_internal_encoding_data_t encoding_data;
+  zc_cgo_bytes_data_t attachment_data;
   z_owned_cancellation_token_t *cancellation_token;
+  z_source_info_t source_info;
+  bool has_payload;
+  bool has_encoding;
+  bool has_attachment;
+  bool has_source_info;
 } zc_cgo_querier_get_options_t;
 
 typedef struct zc_cgo_liveliness_get_options_t {
@@ -123,35 +136,97 @@ extern void zenohMatchingListenerCallback(zc_cgo_const_matching_status *status,
                                           void *context);
 extern void zenohMissListenerDrop(void *context);
 
+typedef struct zc_cgo_put_options_t {
+  zc_internal_encoding_data_t encoding_data;
+  zc_cgo_bytes_data_t attachment_data;
+  z_timestamp_t timestamp;
+  z_locality_t allowed_destination;
+  z_source_info_t source_info;
+  z_congestion_control_t congestion_control;
+  z_priority_t priority;
+  z_reliability_t reliability;
+  bool is_express;
+  bool has_encoding;
+  bool has_attachment;
+  bool has_timestamp;
+  bool has_source_info;
+} zc_cgo_put_options_t;
+
+typedef struct zc_cgo_delete_options_t {
+  z_timestamp_t timestamp;
+  z_locality_t allowed_destination;
+  z_congestion_control_t congestion_control;
+  z_priority_t priority;
+  z_reliability_t reliability;
+  bool is_express;
+  bool has_timestamp;
+} zc_cgo_delete_options_t;
+
+typedef struct zc_cgo_publisher_put_options_t {
+  zc_internal_encoding_data_t encoding_data;
+  zc_cgo_bytes_data_t attachment_data;
+  z_timestamp_t timestamp;
+  z_source_info_t source_info;
+  bool has_encoding;
+  bool has_attachment;
+  bool has_timestamp;
+  bool has_source_info;
+} zc_cgo_publisher_put_options_t;
+
+typedef struct zc_cgo_publisher_delete_options_t {
+  z_timestamp_t timestamp;
+  bool has_timestamp;
+} zc_cgo_publisher_delete_options_t;
+
+typedef struct zc_cgo_query_reply_options_t {
+  zc_internal_encoding_data_t encoding_data;
+  zc_cgo_bytes_data_t attachment_data;
+  z_timestamp_t timestamp;
+  z_source_info_t source_info;
+  bool is_express;
+  bool has_encoding;
+  bool has_attachment;
+  bool has_timestamp;
+  bool has_source_info;
+} zc_cgo_query_reply_options_t;
+
+typedef struct zc_cgo_query_reply_del_options_t {
+  zc_cgo_bytes_data_t attachment_data;
+  z_timestamp_t timestamp;
+  z_source_info_t source_info;
+  bool is_express;
+  bool has_attachment;
+  bool has_timestamp;
+  bool has_source_info;
+} zc_cgo_query_reply_del_options_t;
+
+typedef struct zc_cgo_query_reply_err_options_t {
+  zc_internal_encoding_data_t encoding_data;
+  bool has_encoding;
+} zc_cgo_query_reply_err_options_t;
+
 z_result_t zc_cgo_publisher_put(z_owned_publisher_t *publisher,
                                 zc_cgo_bytes_data_t *payload_data,
-                                z_publisher_put_options_t *opts,
-                                zc_internal_encoding_data_t *encoding_data,
-                                zc_cgo_bytes_data_t *attachment_data);
+                                zc_cgo_publisher_put_options_t *opts);
 z_result_t zc_cgo_publisher_delete(z_owned_publisher_t *publisher,
-                                   z_publisher_delete_options_t *opts);
+                                   zc_cgo_publisher_delete_options_t *opts);
 z_result_t zc_cgo_put(z_owned_session_t *session,
                       zc_cgo_string_data_t keyexpr_data,
-                      zc_cgo_bytes_data_t *payload_data, z_put_options_t *opts,
-                      zc_internal_encoding_data_t *encoding_data,
-                      zc_cgo_bytes_data_t *attachment_data);
+                      zc_cgo_bytes_data_t *payload_data,
+                      zc_cgo_put_options_t *opts);
 z_result_t zc_cgo_delete(z_owned_session_t *session,
                          zc_cgo_string_data_t keyexpr_data,
-                         z_delete_options_t *opts);
+                         zc_cgo_delete_options_t *opts);
 z_result_t zc_cgo_query_reply(z_owned_query_t *query,
                               zc_cgo_string_data_t keyexpr_data,
                               zc_cgo_bytes_data_t *payload_data,
-                              z_query_reply_options_t *opts,
-                              zc_internal_encoding_data_t *encoding_data,
-                              zc_cgo_bytes_data_t *attachment_data);
+                              zc_cgo_query_reply_options_t *opts);
 z_result_t zc_cgo_query_reply_err(z_owned_query_t *query,
                                   zc_cgo_bytes_data_t *payload_data,
-                                  z_query_reply_err_options_t *opts,
-                                  zc_internal_encoding_data_t *encoding_data);
+                                  zc_cgo_query_reply_err_options_t *opts);
 z_result_t zc_cgo_query_reply_del(z_owned_query_t *query,
                                   zc_cgo_string_data_t keyexpr_data,
-                                  z_query_reply_del_options_t *opts,
-                                  zc_cgo_bytes_data_t *attachment_data);
+                                  zc_cgo_query_reply_del_options_t *opts);
 z_result_t zc_cgo_get(z_owned_session_t *session,
                       zc_cgo_string_data_t keyexpr_data, const char *params,
                       void *context, zc_cgo_get_options_t *opts);
