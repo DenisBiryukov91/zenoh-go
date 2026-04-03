@@ -47,7 +47,18 @@ type SampleMissListener struct {
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
 //
-// Destroy the sample miss listener.
+// Undeclare and destroy the sample miss listener.
+func (listener *SampleMissListener) Undeclare() error {
+	res := int8(C.ze_undeclare_sample_miss_listener(C.ze_sample_miss_listener_move(listener.listener)))
+	if res == 0 {
+		return nil
+	}
+	return zenoh.NewZError(res, "Failed to undeclare SampleMissListener")
+}
+
+// Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
+//
+// Destroy the sample miss listener - this is equivalent to calling [SampleMissListener.Undeclare] and discarding its return value.
 func (listener *SampleMissListener) Drop() {
 	C.ze_sample_miss_listener_drop(C.ze_sample_miss_listener_move(listener.listener))
 }
@@ -257,7 +268,7 @@ func (subscriber *AdvancedSubscriber) Id() zenoh.EntityGlobalId {
 //
 // Declare a sample miss listener for this advanced subscriber.
 // The listener will send notifications when a sample is missed.
-// SampleMissListener MUST be explicitly destroyed using [SampleMissListener.Drop] once it is no longer needed.
+// SampleMissListener MUST be explicitly destroyed using [SampleMissListener.Drop] or [SampleMissListener.Undeclare] once it is no longer needed.
 func (subscriber *AdvancedSubscriber) DeclareSampleMissListener(handler zenoh.Handler[Miss]) (SampleMissListener, error) {
 	callback, drop, _ := handler.ToCbDropHandler()
 	closure := inner.NewClosure(callback, drop)
@@ -294,7 +305,7 @@ func (subscriber *AdvancedSubscriber) DeclareBackgroundSampleMissListener(closur
 //
 // Declare a liveliness subscriber to detect matching advanced publishers.
 // Only advanced publishers that have enabled PublisherDetection can be detected.
-// The returned subscriber MUST be explicitly destroyed using [AdvancedSubscriber.Undeclare] or [AdvancedSubscriber.Drop].
+// The returned subscriber MUST be explicitly destroyed using [zenoh.Subscriber.Undeclare] or [zenoh.Subscriber.Drop].
 func (subscriber *AdvancedSubscriber) DetectPublishers(handler zenoh.Handler[zenoh.Sample], history bool) (zenoh.Subscriber, error) {
 	callback, drop, recv := handler.ToCbDropHandler()
 	closure := inner.NewClosure(callback, drop)
