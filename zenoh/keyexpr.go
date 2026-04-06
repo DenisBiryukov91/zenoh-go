@@ -16,10 +16,9 @@ package zenoh
 
 // #include "zenoh.h"
 // #include "zenoh_cgo.h"
-// static const int8_t CGO_Z_EINVAL = Z_EINVAL;
 import "C"
 import (
-	"fmt"
+	"errors"
 	"runtime"
 	"unsafe"
 )
@@ -73,19 +72,20 @@ func newKeyExprFromUnsafeCDataPtr(keyexpr unsafe.Pointer) KeyExpr {
 //     3. the key expression must have canon form.
 func NewKeyExpr(keyexpr string) (KeyExpr, error) {
 	if len(keyexpr) == 0 {
-		return KeyExpr{}, NewZError(C.CGO_Z_EINVAL, "Empty string is not a valid key expression")
+		return KeyExpr{}, errors.New("key expression can not be empty")
 	}
 	data, size := toDataLen(keyexpr)
-	if C.z_keyexpr_is_canon((*C.char)(unsafe.Pointer(&data[0])), C.size_t(size)) == 0 {
+	res := int8(C.z_keyexpr_is_canon((*C.char)(unsafe.Pointer(&data[0])), C.size_t(size)))
+	if res == 0 {
 		return KeyExpr{keyexpr: data}, nil
 	}
-	return KeyExpr{}, NewZError(C.CGO_Z_EINVAL, fmt.Sprintf("Failed to construct KeyExpr from: %s", keyexpr))
+	return KeyExpr{}, newZError(res)
 }
 
 // Construct key expression from string, by first trying to canonize it.
 func NewKeyExprAutocanonized(keyexpr string) (KeyExpr, error) {
 	if len(keyexpr) == 0 {
-		return KeyExpr{}, NewZError(C.CGO_Z_EINVAL, "Empty string is not a valid key expression")
+		return KeyExpr{}, errors.New("key expression can not be empty")
 	}
 	data, size := toDataLen(keyexpr)
 	c_size := C.size_t(size)
@@ -93,7 +93,7 @@ func NewKeyExprAutocanonized(keyexpr string) (KeyExpr, error) {
 	if res == 0 {
 		return KeyExpr{keyexpr: data[:int(c_size)]}, nil
 	}
-	return KeyExpr{}, NewZError(res, fmt.Sprintf("Failed to construct KeyExpr from: %s", keyexpr))
+	return KeyExpr{}, newZError(res)
 }
 
 // Return a string representing given key expression.

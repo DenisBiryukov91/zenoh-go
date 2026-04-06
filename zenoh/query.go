@@ -188,7 +188,7 @@ func (query *Query) Reply(keyexpr KeyExpr, payload ZBytes, options *QueryReplyOp
 	if res == 0 {
 		return nil
 	}
-	return NewZError(res, "Failed to send reply")
+	return newZError(res)
 }
 
 // Send a delete reply to the query.
@@ -210,7 +210,7 @@ func (query *Query) ReplyDel(keyexpr KeyExpr, options *QueryReplyDelOptions) err
 	if res == 0 {
 		return nil
 	}
-	return NewZError(res, "Failed to send reply del")
+	return newZError(res)
 }
 
 // Send an error reply to the query.
@@ -233,7 +233,7 @@ func (query *Query) ReplyErr(payload ZBytes, options *QueryReplyErrOptions) erro
 	if res == 0 {
 		return nil
 	}
-	return NewZError(res, "Failed to send reply error")
+	return newZError(res)
 }
 
 // Get the query `AcceptReplies` setting of this query, i.e. which replies are accepted by the query originator.

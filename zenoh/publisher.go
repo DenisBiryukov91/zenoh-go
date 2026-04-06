@@ -79,7 +79,7 @@ func (publisher *Publisher) Undeclare() error {
 	if res == 0 {
 		return nil
 	}
-	return NewZError(res, "Failed to undeclare Publisher")
+	return newZError(res)
 }
 
 // Destroy the publisher.
@@ -105,7 +105,7 @@ func (publisher *Publisher) Put(payload ZBytes, options *PublisherPutOptions) er
 	if res == 0 {
 		return nil
 	}
-	return NewZError(res, "Failed to perform Publisher Put operation")
+	return newZError(res)
 }
 
 // Publish a `DELETE` message onto the publisher's key expression.
@@ -123,7 +123,7 @@ func (publisher *Publisher) Delete(options *PublisherDeleteOptions) error {
 	if res == 0 {
 		return nil
 	}
-	return NewZError(res, "Failed to perform Publisher Delete operation")
+	return newZError(res)
 }
 
 // Get the key expression of the publisher.
@@ -194,7 +194,7 @@ func (session *Session) DeclarePublisher(keyexpr KeyExpr, options *PublisherOpti
 	if res == 0 {
 		return Publisher{publisher: &cPublisher}, nil
 	}
-	return Publisher{}, NewZError(res, "Failed to declare Publisher")
+	return Publisher{}, newZError(res)
 }
 
 // Options passed to [Session.Put] operation.
@@ -310,7 +310,7 @@ func (session *Session) Put(keyExpr KeyExpr, payload ZBytes, options *PutOptions
 	if res == 0 {
 		return nil
 	}
-	return NewZError(res, "Failed to perform Put operation")
+	return newZError(res)
 }
 
 // Send request to delete data on specified key expression (used when working with [Zenoh storages]).
@@ -331,5 +331,5 @@ func (session *Session) Delete(keyExpr KeyExpr, options *DeleteOptions) error {
 	if res == 0 {
 		return nil
 	}
-	return NewZError(res, "Failed to perform Delete operation")
+	return newZError(res)
 }

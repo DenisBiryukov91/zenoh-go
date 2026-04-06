@@ -31,7 +31,7 @@ func main() {
 	fmt.Println("Opening session...")
 	session, err := zenoh.Open(args.config, nil)
 	if err != nil {
-		fmt.Println("Failed to open Zenoh session")
+		fmt.Printf("Failed to open Zenoh session: %v\n", err)
 		os.Exit(-1)
 	}
 	defer session.Drop()
@@ -40,7 +40,7 @@ func main() {
 
 	keyExpr, err := zenoh.NewKeyExpr(selectorKey)
 	if err != nil {
-		fmt.Printf("%s is not a valid key expression\n", selectorKey)
+		fmt.Printf("%s is not a valid key expression: %v\n", selectorKey, err)
 		os.Exit(-1)
 	}
 

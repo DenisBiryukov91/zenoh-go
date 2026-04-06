@@ -16,10 +16,9 @@ package zenoh
 
 // #include "zenoh.h"
 // #include "zenoh_cgo.h"
-// static const int8_t CGO_Z_EINVAL = Z_EINVAL;
 import "C"
 import (
-	"fmt"
+	"errors"
 	"runtime"
 	"unsafe"
 )
@@ -58,7 +57,7 @@ func NewConfigFromFile(file string) (Config, error) {
 		runtime.SetFinalizer(&c, configDrop)
 		return Config{config: &c}, nil
 	} else {
-		return Config{}, NewZError(res, fmt.Sprint("Failed to create config from: ", file))
+		return Config{}, newZError(res)
 	}
 }
 
@@ -72,7 +71,7 @@ func NewConfigFromStr(json string) (Config, error) {
 		runtime.SetFinalizer(&c, configDrop)
 		return Config{config: &c}, nil
 	} else {
-		return Config{}, NewZError(res, fmt.Sprint("Failed to create config from: ", json))
+		return Config{}, newZError(res)
 	}
 }
 
@@ -84,21 +83,21 @@ func NewConfigFromEnv() (Config, error) {
 		runtime.SetFinalizer(&c, configDrop)
 		return Config{config: &c}, nil
 	} else {
-		return Config{}, NewZError(res, "Failed to create config from environment variable")
+		return Config{}, newZError(res)
 	}
 }
 
 // Get config parameter by the string key.
 func (config *Config) Get(key string) (string, error) {
 	if len(key) == 0 {
-		return "", NewZError(C.CGO_Z_EINVAL, "Empty string is not a valid config key")
+		return "", errors.New("config key can not be empty")
 	}
 	var s C.z_owned_string_t
 	loanedConfig := C.z_config_loan(config.config)
 	data, size := toDataLen(key)
 	res := int8(C.zc_config_get_from_substr(loanedConfig, (*C.char)(unsafe.Pointer(&data[0])), C.size_t(size), &s))
 	if res != 0 {
-		return "", NewZError(res, "Failed to get config value for the key: "+key)
+		return "", newZError(res)
 	}
 	loanedString := C.z_string_loan(&s)
 	out := C.GoStringN(C.z_string_data(loanedString), C.int(C.z_string_len(loanedString)))
@@ -128,7 +127,7 @@ func (config *Config) InsertJson5(key string, value string) error {
 	if res == 0 {
 		return nil
 	} else {
-		return NewZError(res, fmt.Sprintf("Failed to insert '%s' for the key '%s' into config", value, key))
+		return newZError(res)
 	}
 }
 

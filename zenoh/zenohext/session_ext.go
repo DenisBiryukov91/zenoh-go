@@ -77,3 +77,6 @@ func newIdFromUnsafeCPtr(unsafe.Pointer) zenoh.Id
 
 //go:linkname newEntityGlobalIdFromUnsafeCPtr zenoh-go/zenoh.newEntityGlobalIdFromUnsafeCPtr
 func newEntityGlobalIdFromUnsafeCPtr(unsafe.Pointer) zenoh.EntityGlobalId
+
+//go:linkname newZError zenoh-go/zenoh.newZError
+func newZError(code int8) zenoh.ZError

@@ -39,7 +39,7 @@ func main() {
 
 	keyexpr, err := zenoh.NewKeyExpr(args.keyexpr)
 	if err != nil {
-		fmt.Printf("%s is not a valid key expression\n", args.keyexpr)
+		fmt.Printf("%s is not a valid key expression: %v\n", args.keyexpr, err)
 		os.Exit(-1)
 	}
 
@@ -65,7 +65,7 @@ func main() {
 	fmt.Printf("Declaring Subscriber on '%s'...\n", keyexpr)
 	sub, err := session.DeclareSubscriber(keyexpr, zenoh.Closure[zenoh.Sample]{Call: subHandler}, nil)
 	if err != nil {
-		fmt.Println("Unable to declare subscriber.")
+		fmt.Printf("Unable to declare subscriber for key expression '%s': %v\n", keyexpr, err)
 		os.Exit(-1)
 	}
 	defer sub.Drop()
@@ -86,7 +86,7 @@ func main() {
 	fmt.Printf("Declaring Queryable on '%s'...\n", keyexpr)
 	queryable, err := session.DeclareQueryable(keyexpr, zenoh.Closure[zenoh.Query]{Call: queryableHandler}, &opts)
 	if err != nil {
-		fmt.Println("Unable to declare queryable.")
+		fmt.Printf("Unable to declare queryable for key expression '%s': %v\n", keyexpr, err)
 		os.Exit(-1)
 	}
 	defer queryable.Drop()

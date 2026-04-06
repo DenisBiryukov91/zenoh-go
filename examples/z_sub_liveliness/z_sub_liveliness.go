@@ -40,21 +40,21 @@ func main() {
 	fmt.Println("Opening session...")
 	session, err := zenoh.Open(args.config, nil)
 	if err != nil {
-		fmt.Println("Failed to open Zenoh session")
+		fmt.Printf("Failed to open Zenoh session: %v\n", err)
 		os.Exit(-1)
 	}
 	defer session.Drop()
 
 	keyExpr, err := zenoh.NewKeyExpr(args.keyexpr)
 	if err != nil {
-		fmt.Printf("%s is not a valid key expression\n", args.keyexpr)
+		fmt.Printf("%s is not a valid key expression: %v\n", args.keyexpr, err)
 		os.Exit(-1)
 	}
 
 	fmt.Printf("Declaring liveliness subscriber on '%s'...\n", args.keyexpr)
 	sub, err := session.Liveliness().DeclareSubscriber(keyExpr, zenoh.Closure[zenoh.Sample]{Call: dataHandler}, &zenoh.LivelinessSubscriberOptions{History: args.history})
 	if err != nil {
-		fmt.Println("Unable to declare liveliness subscriber.")
+		fmt.Printf("Unable to declare liveliness subscriber for key expression '%s': %v\n", keyExpr, err)
 		os.Exit(-1)
 	}
 	defer sub.Drop()

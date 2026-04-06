@@ -14,7 +14,12 @@
 
 package zenoh
 
-import "fmt"
+// #include "zenoh.h"
+import "C"
+import (
+	"fmt"
+	_ "unsafe" // for go:linkname
+)
 
 type ZError struct {
 	code int8
@@ -23,6 +28,11 @@ type ZError struct {
 
 func (e ZError) Error() string { return fmt.Sprintf("%s (Error Code: %d)", e.msg, e.code) }
 
-func NewZError(code int8, msg string) ZError {
+//go:linkname newZError
+func newZError(code int8) ZError {
+	var viewString C.z_view_string_t
+	C.zc_get_last_error(&viewString)
+	loanedString := C.z_view_string_loan(&viewString)
+	msg := C.GoStringN(C.z_string_data(loanedString), C.int(C.z_string_len(loanedString)))
 	return ZError{code: code, msg: msg}
 }

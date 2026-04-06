@@ -48,14 +48,14 @@ func main() {
 
 	keyexpr, err := zenoh.NewKeyExpr(args.keyexpr)
 	if err != nil {
-		fmt.Printf("%s is not a valid key expression\n", args.keyexpr)
+		fmt.Printf("%s is not a valid key expression: %v\n", args.keyexpr, err)
 		os.Exit(-1)
 	}
 
 	fmt.Printf("Declaring Publisher on '%s'...\n", keyexpr)
 	pub, err := session.DeclarePublisher(keyexpr, nil)
 	if err != nil {
-		fmt.Println("Unable to declare Publisher for key expression!")
+		fmt.Printf("Unable to declare Publisher for key expression '%s': %v\n", keyexpr, err)
 		os.Exit(-1)
 	}
 	defer pub.Drop()

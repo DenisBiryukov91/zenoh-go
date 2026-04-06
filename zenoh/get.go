@@ -22,7 +22,7 @@ import "C"
 import (
 	"runtime"
 	"unsafe"
-	"zenoh-go/zenoh/inner"
+	"zenoh-go/zenoh/internal"
 
 	"github.com/BooleanCat/option"
 )
@@ -145,19 +145,19 @@ func (opts *GetOptions) toCOpts(pinner *runtime.Pinner) C.zc_cgo_get_options_t {
 
 //export zenohGetCallbackData
 func zenohGetCallbackData(reply C.zc_cgo_reply_data_t, context unsafe.Pointer) {
-	(*inner.ClosureContext[Reply])(context).Call(newReplyFromC(reply))
+	(*internal.ClosureContext[Reply])(context).Call(newReplyFromC(reply))
 }
 
 //export zenohGetDrop
 func zenohGetDrop(context unsafe.Pointer) {
-	(*inner.ClosureContext[Reply])(context).Drop()
+	(*internal.ClosureContext[Reply])(context).Drop()
 }
 
 // Query data from the matching queryables in the system.
 // Replies are provided through a callback function, if handler is a [Closure], through returned receiver if it is a [RingChannel] or a [FifoChannel].
 func (session *Session) Get(keyexpr KeyExpr, parameters string, handler Handler[Reply], get_options *GetOptions) (<-chan Reply, error) {
 	callback, drop, channel := handler.ToCbDropHandler()
-	closure := inner.NewClosure(callback, drop)
+	closure := internal.NewClosure(callback, drop)
 	pinner := runtime.Pinner{}
 	cKeyexpr := keyexpr.toCData(&pinner)
 	cParams := (*C.char)(nil)
@@ -177,5 +177,5 @@ func (session *Session) Get(keyexpr KeyExpr, parameters string, handler Handler[
 	if res == 0 {
 		return channel, nil
 	}
-	return nil, NewZError(res, "Failed to perform Get operation")
+	return nil, newZError(res)
 }

@@ -37,7 +37,7 @@ func main() {
 
 	keyexpr, err := zenoh.NewKeyExpr(args.keyexpr)
 	if err != nil {
-		fmt.Printf("%s is not a valid key expression\n", args.keyexpr)
+		fmt.Printf("%s is not a valid key expression: %v\n", args.keyexpr, err)
 		os.Exit(-1)
 	}
 

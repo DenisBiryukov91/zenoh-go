@@ -90,9 +90,8 @@ def test_examples(peer_command, peer_expect, client_command, client_expect):
         else:
             raise Exception(f'{client_command} FAILED to get "{client_expect}"')
 
-        # Temporarily disable errors checking, since as of 1.8.0, zenoh may print some errors upon session close.
-        #check_errors(peer_output)
-        #check_errors(client_output)
+        check_errors(peer_output)
+        check_errors(client_output)
     finally:
         terminate_processes(process_list)
 

@@ -21,7 +21,7 @@ import (
 	"runtime"
 	"unsafe"
 	"zenoh-go/zenoh"
-	"zenoh-go/zenoh/inner"
+	"zenoh-go/zenoh/internal"
 
 	"github.com/BooleanCat/option"
 )
@@ -245,7 +245,7 @@ func (publisher *AdvancedPublisher) Undeclare() error {
 	if res == 0 {
 		return nil
 	}
-	return zenoh.NewZError(res, "Failed to undeclare AdvancedPublisher")
+	return newZError(res)
 }
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
@@ -275,7 +275,7 @@ func (publisher *AdvancedPublisher) Put(payload zenoh.ZBytes, options *AdvancedP
 	if res == 0 {
 		return nil
 	}
-	return zenoh.NewZError(res, "Failed to perform AdvancedPublisher Put operation")
+	return newZError(res)
 }
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
@@ -295,7 +295,7 @@ func (publisher *AdvancedPublisher) Delete(options *AdvancedPublisherDeleteOptio
 	if res == 0 {
 		return nil
 	}
-	return zenoh.NewZError(res, "Failed to perform AdvancedPublisher Delete operation")
+	return newZError(res)
 }
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
@@ -323,7 +323,7 @@ func (publisher *AdvancedPublisher) GetMatchingStatus() (zenoh.MatchingStatus, e
 	if res == 0 {
 		return zenoh.MatchingStatus{Matching: bool(status.matching)}, nil
 	}
-	return zenoh.MatchingStatus{}, zenoh.NewZError(res, "Failed to retrieve AdvancedPublisher Matching Status")
+	return zenoh.MatchingStatus{}, newZError(res)
 }
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
@@ -332,7 +332,7 @@ func (publisher *AdvancedPublisher) GetMatchingStatus() (zenoh.MatchingStatus, e
 // Matching listener MUST be explicitly destroyed using [zenoh.MatchingListener.Undeclare] or [zenoh.MatchingListener.Drop] once it is no longer needed.
 func (publisher *AdvancedPublisher) DeclareMatchingListener(handler zenoh.Handler[zenoh.MatchingStatus]) (zenoh.MatchingListener, error) {
 	callback, drop, recv := handler.ToCbDropHandler()
-	listenerClosure := inner.NewClosure(callback, drop)
+	listenerClosure := internal.NewClosure(callback, drop)
 	var cClosure C.z_owned_closure_matching_status_t
 	C.z_closure_matching_status(&cClosure, (*[0]byte)(C.zenohMatchingListenerCallback), (*[0]byte)(C.zenohMatchingListenerDrop), unsafe.Pointer(listenerClosure))
 
@@ -342,7 +342,7 @@ func (publisher *AdvancedPublisher) DeclareMatchingListener(handler zenoh.Handle
 	if res == 0 {
 		return matchingListenerFromUnsafeCPtrAndReceiver(unsafe.Pointer(&cMatchingListener), recv), nil
 	}
-	return zenoh.MatchingListener{}, zenoh.NewZError(res, "Failed to declare Matching Listener for AdvancedPublisher")
+	return zenoh.MatchingListener{}, newZError(res)
 }
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
@@ -350,7 +350,7 @@ func (publisher *AdvancedPublisher) DeclareMatchingListener(handler zenoh.Handle
 // Declare a background matching listener for this advanced publisher.
 // The callback will be run in the background until the corresponding publisher is dropped.
 func (publisher *AdvancedPublisher) DeclareBackgroundMatchingListener(closure zenoh.Closure[zenoh.MatchingStatus]) error {
-	listenerClosure := inner.NewClosure(closure.Call, closure.Drop)
+	listenerClosure := internal.NewClosure(closure.Call, closure.Drop)
 	var cClosure C.z_owned_closure_matching_status_t
 	C.z_closure_matching_status(&cClosure, (*[0]byte)(C.zenohMatchingListenerCallback), (*[0]byte)(C.zenohMatchingListenerDrop), unsafe.Pointer(listenerClosure))
 
@@ -359,7 +359,7 @@ func (publisher *AdvancedPublisher) DeclareBackgroundMatchingListener(closure ze
 	if res == 0 {
 		return nil
 	}
-	return zenoh.NewZError(res, "Failed to declare background Matching Listener for AdvancedPublisher")
+	return newZError(res)
 }
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
@@ -385,5 +385,5 @@ func (session *SessionExt) DeclareAdvancedPublisher(keyexpr zenoh.KeyExpr, optio
 	if res == 0 {
 		return AdvancedPublisher{publisher: &cPublisher}, nil
 	}
-	return AdvancedPublisher{}, zenoh.NewZError(res, "Failed to declare AdvancedPublisher")
+	return AdvancedPublisher{}, newZError(res)
 }

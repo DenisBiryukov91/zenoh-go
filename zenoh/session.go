@@ -21,17 +21,17 @@ package zenoh
 import "C"
 import (
 	"unsafe"
-	"zenoh-go/zenoh/inner"
+	"zenoh-go/zenoh/internal"
 )
 
 //export zenohZIdCallback
 func zenohZIdCallback(id *C.czid_t, context unsafe.Pointer) {
-	(*inner.ClosureContext[Id])(context).Call(Id{id: *id})
+	(*internal.ClosureContext[Id])(context).Call(Id{id: *id})
 }
 
 //export zenohZIdDrop
 func zenohZIdDrop(context unsafe.Pointer) {
-	(*inner.ClosureContext[Id])(context).Drop()
+	(*internal.ClosureContext[Id])(context).Drop()
 }
 
 // A Zenoh session.
@@ -76,7 +76,7 @@ func Open(config Config, options *SessionOptions) (Session, error) {
 	if res == 0 {
 		return Session{session: &cSession}, nil
 	} else {
-		return Session{}, NewZError(res, "Failed to open session")
+		return Session{}, newZError(res)
 	}
 }
 
@@ -93,7 +93,7 @@ func (session *Session) Close(options *SessionCloseOptions) error {
 	if res == 0 {
 		return nil
 	} else {
-		return NewZError(res, "Failed to close the session")
+		return newZError(res)
 	}
 }
 
@@ -123,12 +123,12 @@ func (session Session) Id() EntityGlobalId {
 func (session Session) PeersZId() ([]Id, error) {
 	var ids []Id
 
-	closure := inner.NewClosure(func(id Id) { ids = append(ids, id) }, nil)
+	closure := internal.NewClosure(func(id Id) { ids = append(ids, id) }, nil)
 	var cClosure C.z_owned_closure_zid_t
 	C.z_closure_zid(&cClosure, (*[0]byte)(C.zenohZIdCallback), (*[0]byte)(C.zenohZIdDrop), unsafe.Pointer(closure))
 	res := int8(C.z_info_peers_zid(C.z_session_loan(session.session), C.z_closure_zid_move(&cClosure)))
 	if res != 0 {
-		return []Id{}, NewZError(res, "Failed to fetch peers Ids")
+		return []Id{}, newZError(res)
 	}
 	return ids, nil
 }
@@ -137,12 +137,12 @@ func (session Session) PeersZId() ([]Id, error) {
 func (session Session) RoutersZId() ([]Id, error) {
 	var ids []Id
 
-	closure := inner.NewClosure(func(id Id) { ids = append(ids, id) }, nil)
+	closure := internal.NewClosure(func(id Id) { ids = append(ids, id) }, nil)
 	var cClosure C.z_owned_closure_zid_t
 	C.z_closure_zid(&cClosure, (*[0]byte)(C.zenohZIdCallback), (*[0]byte)(C.zenohZIdDrop), unsafe.Pointer(closure))
 	res := int8(C.z_info_routers_zid(C.z_session_loan(session.session), C.z_closure_zid_move(&cClosure)))
 	if res != 0 {
-		return []Id{}, NewZError(res, "Failed to fetch routers Ids")
+		return []Id{}, newZError(res)
 	}
 	return ids, nil
 }

@@ -41,7 +41,7 @@ func main() {
 	fmt.Println("Opening session...")
 	session, err := zenoh.Open(args.config, nil)
 	if err != nil {
-		fmt.Println("Failed to open Zenoh session")
+		fmt.Printf("Failed to open Zenoh session: %v\n", err)
 		os.Exit(-1)
 	}
 	defer session.Drop()
@@ -50,7 +50,7 @@ func main() {
 
 	keyExpr, err := zenoh.NewKeyExpr(selectorKey)
 	if err != nil {
-		fmt.Printf("%s is not a valid key expression\n", selectorKey)
+		fmt.Printf("%s is not a valid key expression: %v\n", selectorKey, err)
 		os.Exit(-1)
 	}
 
@@ -60,7 +60,7 @@ func main() {
 		&zenoh.QuerierOptions{Target: option.Some(args.queryTarget), TimeoutMs: args.timeout})
 
 	if err != nil {
-		fmt.Println("Unable to declare Querier for key expression!")
+		fmt.Printf("Unable to declare Querier for key expression '%s': %v\n", keyExpr, err)
 		os.Exit(-1)
 	}
 	defer querier.Drop()

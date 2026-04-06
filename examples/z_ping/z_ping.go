@@ -31,21 +31,33 @@ func main() {
 	args := parseArgs()
 
 	fmt.Println("Opening session...")
-	session, _ := zenoh.Open(args.config, nil)
+	session, err := zenoh.Open(args.config, nil)
+	if err != nil {
+		fmt.Printf("Failed to open Zenoh session: %v\n", err)
+		os.Exit(-1)
+	}
 	defer session.Drop()
 
 	keyexprPing, _ := zenoh.NewKeyExpr("test/ping")
 	keyexprPong, _ := zenoh.NewKeyExpr("test/pong")
 
-	sub, _ := session.DeclareSubscriber(keyexprPong, zenoh.NewFifoChannel[zenoh.Sample](16), nil)
+	sub, err := session.DeclareSubscriber(keyexprPong, zenoh.NewFifoChannel[zenoh.Sample](16), nil)
+	if err != nil {
+		fmt.Printf("Unable to declare subscriber for key expression '%s': %v\n", keyexprPong, err)
+		os.Exit(-1)
+	}
 	defer sub.Drop()
 
-	pub, _ := session.DeclarePublisher(
+	pub, err := session.DeclarePublisher(
 		keyexprPing,
 		&zenoh.PublisherOptions{
 			CongestionControl: option.Some(zenoh.CongestionControlBlock),
 			IsExpress:         !args.noExpress,
 		})
+	if err != nil {
+		fmt.Printf("Unable to declare publisher for key expression '%s': %v\n", keyexprPing, err)
+		os.Exit(-1)
+	}
 	defer pub.Drop()
 
 	data := make([]byte, args.size)

@@ -12,7 +12,7 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 
-package inner
+package internal
 
 // #include <stdint.h>
 import "C"

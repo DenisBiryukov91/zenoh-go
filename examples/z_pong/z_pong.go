@@ -30,24 +30,37 @@ func main() {
 	args := parseArgs()
 
 	fmt.Println("Opening session...")
-	session, _ := zenoh.Open(args.config, nil)
+	session, err := zenoh.Open(args.config, nil)
+	if err != nil {
+		fmt.Printf("Failed to open Zenoh session: %v\n", err)
+		os.Exit(-1)
+	}
 	defer session.Drop()
 
 	keyexprPing, _ := zenoh.NewKeyExpr("test/ping")
 	keyexprPong, _ := zenoh.NewKeyExpr("test/pong")
 
-	pub, _ := session.DeclarePublisher(
+	pub, err := session.DeclarePublisher(
 		keyexprPong,
 		&zenoh.PublisherOptions{
 			CongestionControl: option.Some(zenoh.CongestionControlBlock),
 			IsExpress:         !args.noExpress,
 		})
+	if err != nil {
+		fmt.Printf("Unable to declare publisher for key expression '%s': %v\n", keyexprPong, err)
+		os.Exit(-1)
+	}
 	defer pub.Drop()
 
-	session.DeclareBackgroundSubscriber(
+	err = session.DeclareBackgroundSubscriber(
 		keyexprPing,
 		zenoh.Closure[zenoh.Sample]{Call: func(sample zenoh.Sample) { pub.Put(sample.Payload(), nil) }},
 		nil)
+
+	if err != nil {
+		fmt.Printf("Unable to declare background subscriber for key expression '%s': %v\n", keyexprPing, err)
+		os.Exit(-1)
+	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)

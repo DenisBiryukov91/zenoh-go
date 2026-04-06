@@ -21,7 +21,7 @@ import (
 	"runtime"
 	"unsafe"
 	"zenoh-go/zenoh"
-	"zenoh-go/zenoh/inner"
+	"zenoh-go/zenoh/internal"
 
 	"github.com/BooleanCat/option"
 )
@@ -53,7 +53,7 @@ func (listener *SampleMissListener) Undeclare() error {
 	if res == 0 {
 		return nil
 	}
-	return zenoh.NewZError(res, "Failed to undeclare SampleMissListener")
+	return newZError(res)
 }
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
@@ -69,12 +69,12 @@ func zenohMissListenerCallback(miss *C.zc_cgo_const_miss_t, context unsafe.Point
 		Source: newEntityGlobalIdFromUnsafeCPtr(unsafe.Pointer(&miss.source)),
 		Nb:     uint32(miss.nb),
 	}
-	(*inner.ClosureContext[Miss])(context).Call(m)
+	(*internal.ClosureContext[Miss])(context).Call(m)
 }
 
 //export zenohMissListenerDrop
 func zenohMissListenerDrop(context unsafe.Pointer) {
-	(*inner.ClosureContext[Miss])(context).Drop()
+	(*internal.ClosureContext[Miss])(context).Drop()
 }
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
@@ -230,7 +230,7 @@ func (subscriber *AdvancedSubscriber) Undeclare() error {
 	if res == 0 {
 		return nil
 	}
-	return zenoh.NewZError(res, "Failed to undeclare AdvancedSubscriber")
+	return newZError(res)
 }
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
@@ -271,7 +271,7 @@ func (subscriber *AdvancedSubscriber) Id() zenoh.EntityGlobalId {
 // SampleMissListener MUST be explicitly destroyed using [SampleMissListener.Drop] or [SampleMissListener.Undeclare] once it is no longer needed.
 func (subscriber *AdvancedSubscriber) DeclareSampleMissListener(handler zenoh.Handler[Miss]) (SampleMissListener, error) {
 	callback, drop, _ := handler.ToCbDropHandler()
-	closure := inner.NewClosure(callback, drop)
+	closure := internal.NewClosure(callback, drop)
 	var cClosure C.ze_owned_closure_miss_t
 	C.ze_closure_miss(&cClosure, (*[0]byte)(C.zenohMissListenerCCallback), (*[0]byte)(C.zenohMissListenerDrop), unsafe.Pointer(closure))
 
@@ -281,7 +281,7 @@ func (subscriber *AdvancedSubscriber) DeclareSampleMissListener(handler zenoh.Ha
 	if res == 0 {
 		return SampleMissListener{listener: &cListener}, nil
 	}
-	return SampleMissListener{}, zenoh.NewZError(res, "Failed to declare SampleMissListener")
+	return SampleMissListener{}, newZError(res)
 }
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
@@ -289,7 +289,7 @@ func (subscriber *AdvancedSubscriber) DeclareSampleMissListener(handler zenoh.Ha
 // Declare a background sample miss listener for this advanced subscriber.
 // The callback will run in the background until the subscriber is dropped.
 func (subscriber *AdvancedSubscriber) DeclareBackgroundSampleMissListener(closure zenoh.Closure[Miss]) error {
-	missClosureCtx := inner.NewClosure(closure.Call, closure.Drop)
+	missClosureCtx := internal.NewClosure(closure.Call, closure.Drop)
 	var cClosure C.ze_owned_closure_miss_t
 	C.ze_closure_miss(&cClosure, (*[0]byte)(C.zenohMissListenerCCallback), (*[0]byte)(C.zenohMissListenerDrop), unsafe.Pointer(missClosureCtx))
 
@@ -298,7 +298,7 @@ func (subscriber *AdvancedSubscriber) DeclareBackgroundSampleMissListener(closur
 	if res == 0 {
 		return nil
 	}
-	return zenoh.NewZError(res, "Failed to declare background SampleMissListener")
+	return newZError(res)
 }
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
@@ -308,7 +308,7 @@ func (subscriber *AdvancedSubscriber) DeclareBackgroundSampleMissListener(closur
 // The returned subscriber MUST be explicitly destroyed using [zenoh.Subscriber.Undeclare] or [zenoh.Subscriber.Drop].
 func (subscriber *AdvancedSubscriber) DetectPublishers(handler zenoh.Handler[zenoh.Sample], history bool) (zenoh.Subscriber, error) {
 	callback, drop, recv := handler.ToCbDropHandler()
-	closure := inner.NewClosure(callback, drop)
+	closure := internal.NewClosure(callback, drop)
 	var cClosure C.z_owned_closure_sample_t
 	C.z_closure_sample(&cClosure, (*[0]byte)(C.zenohSubscriberCallback), (*[0]byte)(C.zenohSubscriberDrop), unsafe.Pointer(closure))
 
@@ -322,7 +322,7 @@ func (subscriber *AdvancedSubscriber) DetectPublishers(handler zenoh.Handler[zen
 	if res == 0 {
 		return subscriberFromUnsafeCPtrAndReceiver(unsafe.Pointer(&cLivelinessSubscriber), recv), nil
 	}
-	return zenoh.Subscriber{}, zenoh.NewZError(res, "Failed to detect publishers for AdvancedSubscriber")
+	return zenoh.Subscriber{}, newZError(res)
 }
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
@@ -331,7 +331,7 @@ func (subscriber *AdvancedSubscriber) DetectPublishers(handler zenoh.Handler[zen
 // Only advanced publishers with PublisherDetection enabled can be detected.
 // The callback will run in the background until the session is closed.
 func (subscriber *AdvancedSubscriber) DetectPublishersBackground(closure zenoh.Closure[zenoh.Sample], history bool) error {
-	subClosure := inner.NewClosure(closure.Call, closure.Drop)
+	subClosure := internal.NewClosure(closure.Call, closure.Drop)
 	var cClosure C.z_owned_closure_sample_t
 	C.z_closure_sample(&cClosure, (*[0]byte)(C.zenohSubscriberCallback), (*[0]byte)(C.zenohSubscriberDrop), unsafe.Pointer(subClosure))
 
@@ -344,7 +344,7 @@ func (subscriber *AdvancedSubscriber) DetectPublishersBackground(closure zenoh.C
 	if res == 0 {
 		return nil
 	}
-	return zenoh.NewZError(res, "Failed to detect publishers (background) for AdvancedSubscriber")
+	return newZError(res)
 }
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
@@ -353,7 +353,7 @@ func (subscriber *AdvancedSubscriber) DetectPublishersBackground(closure zenoh.C
 // Advanced subscriber MUST be explicitly destroyed using [AdvancedSubscriber.Undeclare] or [AdvancedSubscriber.Drop] once it is no longer needed.
 func (session *SessionExt) DeclareAdvancedSubscriber(keyexpr zenoh.KeyExpr, handler zenoh.Handler[zenoh.Sample], options *AdvancedSubscriberOptions) (AdvancedSubscriber, error) {
 	callback, drop, recv := handler.ToCbDropHandler()
-	closure := inner.NewClosure(callback, drop)
+	closure := internal.NewClosure(callback, drop)
 	var cClosure C.z_owned_closure_sample_t
 	C.z_closure_sample(&cClosure, (*[0]byte)(C.zenohSubscriberCallback), (*[0]byte)(C.zenohSubscriberDrop), unsafe.Pointer(closure))
 
@@ -373,7 +373,7 @@ func (session *SessionExt) DeclareAdvancedSubscriber(keyexpr zenoh.KeyExpr, hand
 	if res == 0 {
 		return AdvancedSubscriber{subscriber: &cSubscriber, receiver: recv}, nil
 	}
-	return AdvancedSubscriber{}, zenoh.NewZError(res, "Failed to declare AdvancedSubscriber")
+	return AdvancedSubscriber{}, newZError(res)
 }
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
@@ -381,7 +381,7 @@ func (session *SessionExt) DeclareAdvancedSubscriber(keyexpr zenoh.KeyExpr, hand
 // Construct and declare a background advanced subscriber.
 // The subscriber callback will be called to process messages until the corresponding session is closed or dropped.
 func (session *SessionExt) DeclareBackgroundAdvancedSubscriber(keyexpr zenoh.KeyExpr, closure zenoh.Closure[zenoh.Sample], options *AdvancedSubscriberOptions) error {
-	subClosure := inner.NewClosure(closure.Call, closure.Drop)
+	subClosure := internal.NewClosure(closure.Call, closure.Drop)
 	var cClosure C.z_owned_closure_sample_t
 	C.z_closure_sample(&cClosure, (*[0]byte)(C.zenohSubscriberCallback), (*[0]byte)(C.zenohSubscriberDrop), unsafe.Pointer(subClosure))
 
@@ -400,5 +400,5 @@ func (session *SessionExt) DeclareBackgroundAdvancedSubscriber(keyexpr zenoh.Key
 	if res == 0 {
 		return nil
 	}
-	return zenoh.NewZError(res, "Failed to declare background AdvancedSubscriber")
+	return newZError(res)
 }

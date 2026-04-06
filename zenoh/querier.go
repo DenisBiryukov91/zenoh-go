@@ -20,7 +20,7 @@ import "C"
 import (
 	"runtime"
 	"unsafe"
-	"zenoh-go/zenoh/inner"
+	"zenoh-go/zenoh/internal"
 
 	"github.com/BooleanCat/option"
 )
@@ -136,7 +136,7 @@ func (session *Session) DeclareQuerier(keyexpr KeyExpr, options *QuerierOptions)
 	if res == 0 {
 		return Querier{querier: &cQuerier}, nil
 	}
-	return Querier{}, NewZError(res, "Failed to declare Querier")
+	return Querier{}, newZError(res)
 }
 
 // Destroy the querier.
@@ -148,7 +148,7 @@ func (querier *Querier) Drop() {
 // Replies are provided through a callback function, if handler is a [Closure], through returned receiver if it is a [RingChannel] or a [FifoChannel].
 func (querier *Querier) Get(parameters string, handler Handler[Reply], get_options *QuerierGetOptions) (<-chan Reply, error) {
 	callback, drop, channel := handler.ToCbDropHandler()
-	closure := inner.NewClosure(callback, drop)
+	closure := internal.NewClosure(callback, drop)
 	pinner := runtime.Pinner{}
 	cParams := (*C.char)(nil)
 	if len(parameters) != 0 {
@@ -167,5 +167,5 @@ func (querier *Querier) Get(parameters string, handler Handler[Reply], get_optio
 	if res == 0 {
 		return channel, nil
 	}
-	return nil, NewZError(res, "Failed to perform Querier Get operation")
+	return nil, newZError(res)
 }

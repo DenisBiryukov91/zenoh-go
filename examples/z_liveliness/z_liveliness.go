@@ -31,14 +31,14 @@ func main() {
 	fmt.Println("Opening session...")
 	session, err := zenoh.Open(args.config, nil)
 	if err != nil {
-		fmt.Println("Failed to open Zenoh session")
+		fmt.Printf("Failed to open Zenoh session: %v\n", err)
 		os.Exit(-1)
 	}
 	defer session.Drop()
 
 	keyExpr, err := zenoh.NewKeyExpr(args.keyexpr)
 	if err != nil {
-		fmt.Printf("%s is not a valid key expression\n", args.keyexpr)
+		fmt.Printf("%s is not a valid key expression: %v\n", args.keyexpr, err)
 		os.Exit(-1)
 	}
 

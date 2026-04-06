@@ -51,7 +51,7 @@ func (cancellationToken *CancellationToken) Cancel() error {
 	loanedCancellationToken := C.z_cancellation_token_loan_mut(cancellationToken.cancellationToken)
 	res := int8(C.z_cancellation_token_cancel(loanedCancellationToken))
 	if res != 0 {
-		return NewZError(res, "Failed to cancel")
+		return newZError(res)
 	}
 	return nil
 }

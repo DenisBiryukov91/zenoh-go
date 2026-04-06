@@ -20,19 +20,19 @@ import "C"
 import (
 	"runtime"
 	"unsafe"
-	"zenoh-go/zenoh/inner"
+	"zenoh-go/zenoh/internal"
 
 	"github.com/BooleanCat/option"
 )
 
 //export zenohSubscriberCallbackData
 func zenohSubscriberCallbackData(sample C.zc_cgo_sample_data_t, context unsafe.Pointer) {
-	(*inner.ClosureContext[Sample])(context).Call(newSampleFromC(sample))
+	(*internal.ClosureContext[Sample])(context).Call(newSampleFromC(sample))
 }
 
 //export zenohSubscriberDrop
 func zenohSubscriberDrop(context unsafe.Pointer) {
-	(*inner.ClosureContext[Sample])(context).Drop()
+	(*internal.ClosureContext[Sample])(context).Drop()
 }
 
 // A Zenoh [subscriber].
@@ -60,7 +60,7 @@ func (subscriber *Subscriber) Undeclare() error {
 	if res == 0 {
 		return nil
 	}
-	return NewZError(res, "Failed to undeclare Subscriber")
+	return newZError(res)
 }
 
 // Return Subscriber receiver if it was constructed with channel, nil otherwise.
@@ -105,7 +105,7 @@ func (opts *SubscriberOptions) toCOpts(_ *runtime.Pinner) C.z_subscriber_options
 // Subscriber MUST be explicitly destroyed using [Subscriber.Undeclare] or [Subscriber.Drop] once it is no longer needed.
 func (session *Session) DeclareSubscriber(keyexpr KeyExpr, handler Handler[Sample], options *SubscriberOptions) (Subscriber, error) {
 	callback, drop, recv := handler.ToCbDropHandler()
-	closure := inner.NewClosure(callback, drop)
+	closure := internal.NewClosure(callback, drop)
 	var cClosure C.z_owned_closure_sample_t
 	C.z_closure_sample(&cClosure, (*[0]byte)(C.zenohSubscriberCallback), (*[0]byte)(C.zenohSubscriberDrop), unsafe.Pointer(closure))
 	pinner := runtime.Pinner{}
@@ -123,13 +123,13 @@ func (session *Session) DeclareSubscriber(keyexpr KeyExpr, handler Handler[Sampl
 	if res == 0 {
 		return Subscriber{subscriber: &cSubscriber, receiver: recv}, nil
 	}
-	return Subscriber{}, NewZError(res, "Failed to declare Subscriber")
+	return Subscriber{}, newZError(res)
 }
 
 // Construct and declare a background subscriber. Subscriber callback will be called to process the messages,
 // until the corresponding session is closed or dropped.
 func (session *Session) DeclareBackgroundSubscriber(keyexpr KeyExpr, closure Closure[Sample], options *SubscriberOptions) error {
-	subClosure := inner.NewClosure(closure.Call, closure.Drop)
+	subClosure := internal.NewClosure(closure.Call, closure.Drop)
 	var cClosure C.z_owned_closure_sample_t
 	C.z_closure_sample(&cClosure, (*[0]byte)(C.zenohSubscriberCallback), (*[0]byte)(C.zenohSubscriberDrop), unsafe.Pointer(subClosure))
 	pinner := runtime.Pinner{}
@@ -146,5 +146,5 @@ func (session *Session) DeclareBackgroundSubscriber(keyexpr KeyExpr, closure Clo
 	if res == 0 {
 		return nil
 	}
-	return NewZError(res, "Failed to declare background Subscriber")
+	return newZError(res)
 }

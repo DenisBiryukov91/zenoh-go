@@ -20,19 +20,19 @@ import "C"
 import (
 	"runtime"
 	"unsafe"
-	"zenoh-go/zenoh/inner"
+	"zenoh-go/zenoh/internal"
 
 	"github.com/BooleanCat/option"
 )
 
 //export zenohQueryableCallbackData
 func zenohQueryableCallbackData(query C.zc_cgo_query_data_t, context unsafe.Pointer) {
-	(*inner.ClosureContext[Query])(context).Call(newQueryFromC(query))
+	(*internal.ClosureContext[Query])(context).Call(newQueryFromC(query))
 }
 
 //export zenohQueryableDrop
 func zenohQueryableDrop(context unsafe.Pointer) {
-	(*inner.ClosureContext[Query])(context).Drop()
+	(*internal.ClosureContext[Query])(context).Drop()
 }
 
 // A Zenoh [queryable]. Responds to queries sent via [Session.Get] with intersecting key expression.
@@ -49,7 +49,7 @@ func (queryable *Queryable) Undeclare() error {
 	if res == 0 {
 		return nil
 	}
-	return NewZError(res, "Failed to undeclare Queryable")
+	return newZError(res)
 }
 
 // Return Queryable receiver if it was constructed with channel, nil otherwise.
@@ -83,7 +83,7 @@ func (opts *QueryableOptions) toCOpts(_ *runtime.Pinner) C.z_queryable_options_t
 // Queryable MUST be explicitly destroyed using [Queryable.Undeclare] or [Queryable.Drop] once it is no longer needed.
 func (session *Session) DeclareQueryable(keyexpr KeyExpr, handler Handler[Query], options *QueryableOptions) (Queryable, error) {
 	callback, drop, channel := handler.ToCbDropHandler()
-	closure := inner.NewClosure(callback, drop)
+	closure := internal.NewClosure(callback, drop)
 	var cClosure C.z_owned_closure_query_t
 	C.z_closure_query(&cClosure, (*[0]byte)(C.zenohQueryableCallback), (*[0]byte)(C.zenohQueryableDrop), unsafe.Pointer(closure))
 	pinner := runtime.Pinner{}
@@ -101,13 +101,13 @@ func (session *Session) DeclareQueryable(keyexpr KeyExpr, handler Handler[Query]
 	if res == 0 {
 		return Queryable{queryable: &cQueryable, receiver: channel}, nil
 	}
-	return Queryable{}, NewZError(res, "Failed to declare Queryable")
+	return Queryable{}, newZError(res)
 }
 
 // Declare a background queryable for a given keyexpr. The queryable callback will be be called
 // to proccess incoming queries until the corresponding session is closed or dropped.
 func (session *Session) DeclareBackgroundQueryable(keyexpr KeyExpr, closure Closure[Query], options *QueryableOptions) error {
-	qClosure := inner.NewClosure(closure.Call, closure.Drop)
+	qClosure := internal.NewClosure(closure.Call, closure.Drop)
 	var cClosure C.z_owned_closure_query_t
 	C.z_closure_query(&cClosure, (*[0]byte)(C.zenohQueryableCallback), (*[0]byte)(C.zenohQueryableDrop), unsafe.Pointer(qClosure))
 	pinner := runtime.Pinner{}
@@ -124,7 +124,7 @@ func (session *Session) DeclareBackgroundQueryable(keyexpr KeyExpr, closure Clos
 	if res == 0 {
 		return nil
 	}
-	return NewZError(res, "Failed to declare background Queryable")
+	return newZError(res)
 }
 
 // Get the key expression of the queryable.
