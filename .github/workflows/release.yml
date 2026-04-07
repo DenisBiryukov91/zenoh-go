@@ -1,0 +1,106 @@
+# Copyright (c) 2026 ZettaScale Technology
+#
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
+# which is available at https://www.apache.org/licenses/LICENSE-2.0.
+#
+# SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+#
+# Contributors:
+#   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
+#
+name: Release
+
+on:
+  schedule:
+    - cron: "0 0 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      live-run:
+        type: boolean
+        description: Live-run
+        required: false
+        default: false
+      version:
+        type: string
+        description: Release number
+        required: false
+      branch:
+        type: string
+        description: Release branch
+        required: false
+
+jobs:
+  version_and_tag:
+    name: Compute version and tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version_and_tag.outputs.version }}
+      tag: ${{ steps.version_and_tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for all tags and branches
+
+      - id: version_and_tag
+        name: Compute version and tag
+        run: |
+          set -euo pipefail
+
+          if [ -n "${{ inputs.version }}" ]; then
+            raw_version='${{ inputs.version }}'
+          else
+            # Extract the version from the latest tag
+            raw_version=$(git tag --list 'v*' --sort=-version:refname | head -n 1)
+            if [ -z "$raw_version" ]; then
+              echo "No release tag matching v* found"
+              exit 1
+            fi
+          fi
+
+          version="${raw_version#v}"
+          # Use 'v' prefix in the tag for go modules compatibility'
+          tag="v${version}"
+
+          printf "version=%s\n" "$version" >> "$GITHUB_OUTPUT"
+          printf "tag=%s\n" "$tag" >> "$GITHUB_OUTPUT"
+  tag:
+    name: Branch, Bump & tag
+    runs-on: ubuntu-latest
+    needs: version_and_tag
+    steps:
+      - id: create-release-branch
+        uses: eclipse-zenoh/ci/create-release-branch@main
+        with:
+          repo: ${{ github.repository }}
+          live-run: ${{ inputs.live-run || false }}
+          version: ${{ needs.version_and_tag.outputs.version }}
+          branch: ${{ inputs.branch }}
+          github-token: ${{ secrets.BOT_TOKEN_WORKFLOW }}
+
+      - name: Checkout release branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.create-release-branch.outputs.branch }}
+          fetch-depth: 0
+          token: ${{ secrets.BOT_TOKEN_WORKFLOW }}
+
+      - name: Create annotated tag
+        if: ${{ inputs.live-run || false }}
+        shell: bash
+        run: |
+          git fetch --tags origin
+          if git rev-parse '${{ needs.version_and_tag.outputs.tag }}' >/dev/null 2>&1; then
+            echo "Tag ${{ needs.version_and_tag.outputs.tag }} already exists"
+            exit 1
+          fi
+          git config user.name "eclipse-zenoh-bot"
+          git config user.email "eclipse-zenoh-bot@users.noreply.github.com"
+          git tag -a '${{ needs.version_and_tag.outputs.tag }}' -m '${{ needs.version_and_tag.outputs.tag }}'
+
+      - name: Push tag
+        if: ${{ inputs.live-run || false }}
+        shell: bash
+        run: |
+          git push origin '${{ needs.version_and_tag.outputs.tag }}'
