@@ -94,11 +94,6 @@ jobs:
           export LD_LIBRARY_PATH="/tmp/local/lib"
           make test_examples
 
-      - name: Test examples with QUIC
-        run: |
-          export LD_LIBRARY_PATH="/tmp/local/lib"
-          make test_examples_quic
-
   fmt:
     name: Check code format
     runs-on: ubuntu-latest

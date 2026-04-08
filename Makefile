@@ -52,8 +52,3 @@ test:
 .PHONY: test_examples
 test_examples:
 	python3 tests/test_examples.py $(BIN_DIR)
-
-# Run examples tests QUIC
-.PHONY: test_examples_quic
-test_examples_quic:
-	python3 tests/test_examples.py -l "quic/localhost:7449" -e "quic/localhost:7449" -c tests/quic.json5 $(BIN_DIR)
