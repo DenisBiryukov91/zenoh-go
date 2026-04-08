@@ -18,7 +18,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"zenoh-go/zenoh"
+
+	"github.com/eclipse-zenoh/zenoh-go/zenoh"
 
 	"github.com/spf13/pflag"
 )

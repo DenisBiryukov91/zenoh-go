@@ -19,7 +19,8 @@ package zenoh
 import "C"
 import (
 	"unsafe"
-	"zenoh-go/zenoh/internal"
+
+	"github.com/eclipse-zenoh/zenoh-go/zenoh/internal"
 )
 
 // A struct that indicates if there exist Subscribers matching the Publisher's key expression or Queryables matching Querier's key expression and target.

@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"zenoh-go/zenoh"
+	"github.com/eclipse-zenoh/zenoh-go/zenoh"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -140,6 +140,7 @@ func TestPutSubRingChannel(t *testing.T) {
 
 	select {
 	case sample := <-sub.Handler():
+
 		assert.Equal(t, "second", sample.Payload().String())
 	case <-time.After(2 * time.Second):
 		t.Fatal("Timeout waiting for first message")

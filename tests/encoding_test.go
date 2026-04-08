@@ -17,7 +17,7 @@ package zenoh_test
 import (
 	"testing"
 
-	"zenoh-go/zenoh"
+	"github.com/eclipse-zenoh/zenoh-go/zenoh"
 
 	"github.com/stretchr/testify/assert"
 )

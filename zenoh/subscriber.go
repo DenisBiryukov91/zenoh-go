@@ -20,7 +20,8 @@ import "C"
 import (
 	"runtime"
 	"unsafe"
-	"zenoh-go/zenoh/internal"
+
+	"github.com/eclipse-zenoh/zenoh-go/zenoh/internal"
 
 	"github.com/BooleanCat/option"
 )

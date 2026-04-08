@@ -16,8 +16,9 @@ package main
 
 import (
 	"fmt"
-	"zenoh-go/zenoh"
-	"zenoh-go/zenoh/zenohext"
+
+	"github.com/eclipse-zenoh/zenoh-go/zenoh"
+	"github.com/eclipse-zenoh/zenoh-go/zenoh/zenohext"
 )
 
 func main() {

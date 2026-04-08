@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"zenoh-go/zenoh"
+	"github.com/eclipse-zenoh/zenoh-go/zenoh"
 
 	"github.com/BooleanCat/option"
 	"github.com/stretchr/testify/assert"

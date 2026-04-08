@@ -18,7 +18,8 @@ import (
 	"sync"
 	"testing"
 	"time"
-	"zenoh-go/zenoh"
+
+	"github.com/eclipse-zenoh/zenoh-go/zenoh"
 )
 
 func TestLivelinessGet(t *testing.T) {

@@ -22,7 +22,8 @@ import (
 	"math"
 	"reflect"
 	"unsafe"
-	"zenoh-go/zenoh"
+
+	"github.com/eclipse-zenoh/zenoh-go/zenoh"
 
 	"github.com/go-delve/delve/pkg/dwarf/leb128"
 )

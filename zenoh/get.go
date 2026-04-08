@@ -22,9 +22,9 @@ import "C"
 import (
 	"runtime"
 	"unsafe"
-	"zenoh-go/zenoh/internal"
 
 	"github.com/BooleanCat/option"
+	"github.com/eclipse-zenoh/zenoh-go/zenoh/internal"
 )
 
 // The Queryables that should be target of a get.

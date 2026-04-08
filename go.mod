@@ -1,4 +1,4 @@
-module zenoh-go
+module github.com/eclipse-zenoh/zenoh-go
 
 go 1.22
 
