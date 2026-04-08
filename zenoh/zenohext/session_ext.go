@@ -21,7 +21,8 @@ import "C"
 import (
 	"runtime"
 	"unsafe"
-	"zenoh-go/zenoh"
+
+	"github.com/eclipse-zenoh/zenoh-go/zenoh"
 )
 
 // Warning: This API has been marked as unstable: it works as advertised, but it may be changed in a future release.
@@ -38,45 +39,45 @@ func Ext(session *zenoh.Session) *SessionExt {
 	return &SessionExt{session: session}
 }
 
-//go:linkname sessionGetInner zenoh-go/zenoh.sessionGetInner
+//go:linkname sessionGetInner github.com/eclipse-zenoh/zenoh-go/zenoh.sessionGetInner
 func sessionGetInner(*zenoh.Session) unsafe.Pointer
 
 func (ext *SessionExt) getInner() *C.z_owned_session_t {
 	return (*C.z_owned_session_t)(sessionGetInner(ext.session))
 }
 
-//go:linkname encodingToUnsafeCPtr zenoh-go/zenoh.encodingToUnsafeCPtr
+//go:linkname encodingToUnsafeCPtr github.com/eclipse-zenoh/zenoh-go/zenoh.encodingToUnsafeCPtr
 func encodingToUnsafeCPtr(zenoh.Encoding) unsafe.Pointer
 
-//go:linkname keyExprToUnsafeCPtr zenoh-go/zenoh.keyExprToUnsafeCPtr
+//go:linkname keyExprToUnsafeCPtr github.com/eclipse-zenoh/zenoh-go/zenoh.keyExprToUnsafeCPtr
 func keyExprToUnsafeCPtr(*zenoh.KeyExpr, *runtime.Pinner) unsafe.Pointer
 
-//go:linkname zbytesToUnsafeCData zenoh-go/zenoh.zbytesToUnsafeCData
+//go:linkname zbytesToUnsafeCData github.com/eclipse-zenoh/zenoh-go/zenoh.zbytesToUnsafeCData
 func zbytesToUnsafeCData(zenoh.ZBytes, *runtime.Pinner, unsafe.Pointer)
 
-//go:linkname newKeyExprFromUnsafeCDataPtr zenoh-go/zenoh.newKeyExprFromUnsafeCDataPtr
+//go:linkname newKeyExprFromUnsafeCDataPtr github.com/eclipse-zenoh/zenoh-go/zenoh.newKeyExprFromUnsafeCDataPtr
 func newKeyExprFromUnsafeCDataPtr(unsafe.Pointer) zenoh.KeyExpr
 
-//go:linkname encodingToUnsafeCData zenoh-go/zenoh.encodingToUnsafeCData
+//go:linkname encodingToUnsafeCData github.com/eclipse-zenoh/zenoh-go/zenoh.encodingToUnsafeCData
 func encodingToUnsafeCData(zenoh.Encoding, *runtime.Pinner, unsafe.Pointer)
 
-//go:linkname timeStampToUnsafeC zenoh-go/zenoh.timeStampToUnsafeC
+//go:linkname timeStampToUnsafeC github.com/eclipse-zenoh/zenoh-go/zenoh.timeStampToUnsafeC
 func timeStampToUnsafeC(zenoh.TimeStamp, unsafe.Pointer)
 
-//go:linkname sourceInfoToUnsafeC zenoh-go/zenoh.sourceInfoToUnsafeC
+//go:linkname sourceInfoToUnsafeC github.com/eclipse-zenoh/zenoh-go/zenoh.sourceInfoToUnsafeC
 func sourceInfoToUnsafeC(zenoh.SourceInfo, unsafe.Pointer)
 
-//go:linkname matchingListenerFromUnsafeCPtrAndReceiver zenoh-go/zenoh.matchingListenerFromUnsafeCPtrAndReceiver
+//go:linkname matchingListenerFromUnsafeCPtrAndReceiver github.com/eclipse-zenoh/zenoh-go/zenoh.matchingListenerFromUnsafeCPtrAndReceiver
 func matchingListenerFromUnsafeCPtrAndReceiver(unsafe.Pointer, <-chan zenoh.MatchingStatus) zenoh.MatchingListener
 
-//go:linkname subscriberFromUnsafeCPtrAndReceiver zenoh-go/zenoh.subscriberFromUnsafeCPtrAndReceiver
+//go:linkname subscriberFromUnsafeCPtrAndReceiver github.com/eclipse-zenoh/zenoh-go/zenoh.subscriberFromUnsafeCPtrAndReceiver
 func subscriberFromUnsafeCPtrAndReceiver(unsafe.Pointer, <-chan zenoh.Sample) zenoh.Subscriber
 
-//go:linkname newIdFromUnsafeCPtr zenoh-go/zenoh.newIdFromUnsafeCPtr
+//go:linkname newIdFromUnsafeCPtr github.com/eclipse-zenoh/zenoh-go/zenoh.newIdFromUnsafeCPtr
 func newIdFromUnsafeCPtr(unsafe.Pointer) zenoh.Id
 
-//go:linkname newEntityGlobalIdFromUnsafeCPtr zenoh-go/zenoh.newEntityGlobalIdFromUnsafeCPtr
+//go:linkname newEntityGlobalIdFromUnsafeCPtr github.com/eclipse-zenoh/zenoh-go/zenoh.newEntityGlobalIdFromUnsafeCPtr
 func newEntityGlobalIdFromUnsafeCPtr(unsafe.Pointer) zenoh.EntityGlobalId
 
-//go:linkname newZError zenoh-go/zenoh.newZError
+//go:linkname newZError github.com/eclipse-zenoh/zenoh-go/zenoh.newZError
 func newZError(code int8) zenoh.ZError

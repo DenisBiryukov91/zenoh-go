@@ -17,8 +17,10 @@ package main
 import (
 	"fmt"
 	"os"
-	"zenoh-go/examples/utils"
-	"zenoh-go/zenoh"
+
+	"github.com/eclipse-zenoh/zenoh-go/examples/utils"
+
+	"github.com/eclipse-zenoh/zenoh-go/zenoh"
 )
 
 func main() {

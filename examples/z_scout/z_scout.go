@@ -18,7 +18,8 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"zenoh-go/zenoh"
+
+	"github.com/eclipse-zenoh/zenoh-go/zenoh"
 )
 
 func main() {

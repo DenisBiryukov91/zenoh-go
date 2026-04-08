@@ -18,9 +18,11 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"zenoh-go/examples/utils"
-	"zenoh-go/zenoh"
-	"zenoh-go/zenoh/zenohext"
+
+	"github.com/eclipse-zenoh/zenoh-go/examples/utils"
+
+	"github.com/eclipse-zenoh/zenoh-go/zenoh"
+	"github.com/eclipse-zenoh/zenoh-go/zenoh/zenohext"
 
 	"github.com/BooleanCat/option"
 	"github.com/spf13/pflag"

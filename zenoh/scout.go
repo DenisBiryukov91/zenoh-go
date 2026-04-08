@@ -22,7 +22,8 @@ import "C"
 import (
 	"fmt"
 	"unsafe"
-	"zenoh-go/zenoh/internal"
+
+	"github.com/eclipse-zenoh/zenoh-go/zenoh/internal"
 )
 
 //export zenohScoutCallback
